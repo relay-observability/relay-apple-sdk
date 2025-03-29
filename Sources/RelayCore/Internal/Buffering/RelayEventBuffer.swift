@@ -11,7 +11,7 @@
 
 import Foundation
 
-/// An actor-based buffer that wraps a RingBuffer of RelayEvent objects.
+/// An actor-based buffer that wraps a production-level RingBuffer of RelayEvent objects.
 /// It provides thread-safe, asynchronous event buffering and periodic flushing using dependency injection for persistence.
 actor RelayEventBuffer {
     
@@ -25,35 +25,40 @@ actor RelayEventBuffer {
     private var flushTask: Task<Void, Never>?
     
     /// The capacity of the buffer.
-    internal let capacity: Int
+    let capacity: Int
 
     /// Creates a new RelayEventBuffer with a configurable capacity.
     /// - Parameters:
     ///   - capacity: The maximum number of events the buffer can hold.
     ///   - writer: The persistence component conforming to EventPersisting.
-    ///   - dropPolicy: The policy used when the buffer is full. Defaults to .dropOldest.
-    internal init(capacity: Int, writer: EventPersisting, dropPolicy: RingBuffer<RelayEvent>.DropPolicy = .dropOldest) {
+    init(capacity: Int, writer: EventPersisting) {
         self.capacity = capacity
-        self.ringBuffer = RingBuffer<RelayEvent>(capacity: capacity, dropPolicy: dropPolicy)
+        self.ringBuffer = RingBuffer<RelayEvent>(capacity: capacity)
         self.writer = writer
     }
     
     /// Adds a new event to the buffer.
     /// - Parameter event: The RelayEvent to add.
-    internal func add(_ event: RelayEvent) {
-        ringBuffer.append(event)
+    func add(_ event: RelayEvent) async {
+        let success = await ringBuffer.enqueue(event)
+        if !success {
+            // Optionally log or handle the dropped event scenario.
+            // The RingBuffer already tracks the number of dropped events.
+        }
     }
     
-    /// Flushes the current buffer by taking a snapshot of all events, clearing the buffer, and writing the events to persistence.
-    internal func flush() async {
-        let events = ringBuffer.snapshot()
-        ringBuffer.clear()
-        await writer.write(events)
+    /// Flushes the current buffer by atomically removing all events and writing them to persistence.
+    func flush() async {
+        let events = await ringBuffer.flush()
+        // Only attempt to write if there are events.
+        if !events.isEmpty {
+            await writer.write(events)
+        }
     }
     
     /// Starts a periodic flush loop that flushes the buffer at the specified interval.
     /// - Parameter interval: The time interval (in seconds) between flushes. Defaults to 5 seconds.
-    internal func startFlush(interval: TimeInterval = 5.0) {
+    func startFlush(interval: TimeInterval = 5.0) {
         flushTask?.cancel()
         flushTask = Task {
             while !Task.isCancelled {
@@ -64,9 +69,8 @@ actor RelayEventBuffer {
     }
     
     /// Stops the periodic flush loop.
-    internal func stopFlush() async {
+    func stopFlush() async {
         flushTask?.cancel()
-        // Await the cancellation to ensure the task finishes.
         _ = await flushTask?.value
         flushTask = nil
     }
