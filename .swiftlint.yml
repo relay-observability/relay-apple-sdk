@@ -54,9 +54,19 @@ type_name:
     - URL
 
 identifier_name:
-  excluded:
-    - id
-    - URL
+  allowed_identifiers: ["i", "j", "x", "y"]
+  min_length:
+    warning: 1
+    error: 1
+  max_length:
+    warning: 40
+    error: 60
+
+# identifier_name:
+#   allowed_identifiers: ["i", "j", "x", "y"]
+#   excluded:
+#     - id
+#     - URL
 
 # Disable rules you don’t want to enforce
 disabled_rules:

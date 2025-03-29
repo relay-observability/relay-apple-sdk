@@ -15,6 +15,8 @@ import Foundation
 public struct RelayEvent {
     public let name: String
     public let timestamp: Date
+
+    // TODO: - Benchmark impact of AnyCodable for high frequency events
     public let attributes: [String: AnyCodable]
 
     public init(name: String, timestamp: Date = Date(), attributes: [String: AnyCodable]) {
