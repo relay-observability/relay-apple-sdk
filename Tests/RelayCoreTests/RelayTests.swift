@@ -1,4 +1,8 @@
 @testable import RelayCore
-import XCTestCase
+import XCTest
 
-final class RelayTests: XCTestCase {}
+final class RelayTests: XCTestCase {
+    func test_validTest() {
+        XCTAssertTrue(true)
+    }
+}
