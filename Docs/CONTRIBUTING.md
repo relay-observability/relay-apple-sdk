@@ -32,6 +32,15 @@ git checkout -b your-feature-name
 - Write tests in `Tests/`
 - Format with `swiftformat` if available
 
+#### ✅ Pre-Commit Linting
+
+To enable shared linting hooks:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
 ### 4. Commit and Push
 
 ```bash
