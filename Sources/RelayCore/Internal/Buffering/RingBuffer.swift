@@ -46,7 +46,9 @@ public struct RingBuffer<T: Sendable> {
     
     /// Indicates whether the buffer is empty.
     public var isEmpty: Bool {
+        // swiftformat:disable
         count == 0
+        // swiftformat:enable
     }
     
     /// Indicates whether the buffer is full.
