@@ -1,27 +1,52 @@
+//
+//  RelayFlushController.swift
+//  RelayCore
+//
+
 import Foundation
-import UIKit
 
-// TODO: - This will need to be refactored so it is testable
+actor RelayFlushController {
+    private var flushTask: Task<Void, Never>?
+    private let interval: TimeInterval
+    private let lifecycleObserver: LifecycleObserver
 
-final class RelayFlushController {
-    private var timer: Timer?
+    init(interval: TimeInterval = 5.0, lifecycleObserver: LifecycleObserver) {
+        self.interval = interval
+        self.lifecycleObserver = lifecycleObserver
+    }
 
-    func startFlushTimer(buffer: RelayEventBuffer) {
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-            buffer.flush()
+    /// Starts the periodic flush loop using Swift Concurrency.
+    ///
+    /// This method schedules a background task that flushes the provided `RelayEventBuffer`
+    /// at regular intervals using `Task.sleep`, which is a suspending, non-blocking sleep
+    /// function provided by Swift Concurrency. This approach avoids blocking threads or
+    /// requiring explicit timers.
+    ///
+    /// The task is safely cancellable and automatically suspended between flushes. It will
+    /// flush one last time if the app is sent to the background (via lifecycle observation).
+    ///
+    /// - Parameter buffer: The in-memory event buffer to flush on a schedule.
+    func start(buffer: RelayEventBuffer) {
+        // Cancel any existing flush loop
+        flushTask?.cancel()
+
+        flushTask = Task {
+            while !Task.isCancelled {
+                // Uses non-blocking sleep to wait for the interval duration
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                await buffer.flush()
+            }
         }
 
-        NotificationCenter.default.addObserver(
-            forName: UIApplication.willResignActiveNotification, 
-            object: nil, 
-            queue: nil
-        ) { _ in
-            buffer.flush()
+        lifecycleObserver.observeWillResignActive {
+            Task {
+                await buffer.flush()
+            }
         }
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        flushTask?.cancel()
+        flushTask = nil
     }
 }
