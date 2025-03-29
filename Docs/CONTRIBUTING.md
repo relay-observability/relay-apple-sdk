@@ -25,30 +25,50 @@ cd relay
 git checkout -b your-feature-name
 ```
 
-### 3. Make Your Changes
+### 3. Bootstrap Your Environment
 
-- Add new modules in `Sources/`
-- Follow SwiftPM module structure
-- Write tests in `Tests/`
-- Format with `swiftformat` if available
+To install required tools and configure Git hooks:
 
-#### ✅ Pre-Commit Linting
+```bash
+./bootstrap.sh
+```
 
-To enable shared linting hooks:
+This will:
+- Set up shared pre-commit hooks
+- Install SwiftLint and SwiftFormat if missing
+- Ensure you're ready to lint, format, and test code
+
+### 4. Use Makefile Commands
+
+Relay includes a Makefile with useful development commands:
+
+| Command            | Description                                |
+|--------------------|--------------------------------------------|
+| `make build`       | Builds the project (defaults to iOS)       |
+| `make build-ios`   | Builds for iOS (alias)                     |
+| `make build-macos` | Builds for macOS (alias)                   |
+| `make test`        | Runs all unit tests with `swift test`      |
+| `make lint`        | Runs SwiftLint with strict rules           |
+| `make format`      | Lints formatting using SwiftFormat         |
+| `make bootstrap`   | Same as `./bootstrap.sh` for convenience   |
+
+#### ✅ Pre-Commit Linting (Optional Manual Setup)
+
+If needed, you can configure pre-commit hooks manually:
 
 ```bash
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit
 ```
 
-### 4. Commit and Push
+### 5. Commit and Push
 
 ```bash
 git commit -m "Add: Short summary of your change"
 git push origin your-feature-name
 ```
 
-### 5. Open a Pull Request
+### 6. Open a Pull Request
 
 Please link to any related issues and include:
 - What this change does
