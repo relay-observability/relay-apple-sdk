@@ -1,0 +1,4 @@
+# Automatically request reviews from the iOS Core team
+* @relay-observability/ios-core
+Sources/ @relay-observability/ios-core
+Tests/ @relay-observability/ios-core
