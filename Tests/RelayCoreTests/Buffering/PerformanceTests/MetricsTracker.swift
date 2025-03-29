@@ -30,7 +30,7 @@ actor MetricsTracker {
     }
 
     func report(totalRuns: Int) {
-        print("=== Relay Buffer Pressure Test Summary ===")
+        print("=== Relay Ring Buffer Benchmark Summary ===")
         print("Total Runs: \(totalRuns)")
         print("Total Events Added: \(totalAdded)")
         print("Total Events Dropped: \(totalDropped)")

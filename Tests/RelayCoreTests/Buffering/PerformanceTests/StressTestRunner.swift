@@ -18,7 +18,7 @@ struct StressTestRunner {
             )
 
             await tester.runTest()
-            await tracker.report(label: profile.name)
+            await tracker.report(totalRuns: 1)
             await tracker.reset()
         }
     }
