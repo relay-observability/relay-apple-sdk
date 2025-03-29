@@ -1,0 +1,66 @@
+# SwiftLint Configuration for Relay
+
+# Directories to lint
+included:
+  - Sources
+  - Tests
+
+# Directories to ignore (optional)
+excluded:
+  - Carthage
+  - Pods
+  - .build
+  - Generated
+
+# Enable strict, modern Swift rules
+opt_in_rules:
+  - attributes
+  - closure_spacing
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - force_unwrapping
+  - let_var_whitespace
+  - nimble_operator
+  - private_outlet
+  - redundant_nil_coalescing
+  - shorthand_operator
+  - toggle_bool
+  - trailing_closure
+  - unowned_variable_capture
+  - unused_declaration
+  - vertical_parameter_alignment_on_call
+  - yoda_condition
+
+# Customize some standard rules
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_name:
+  min_length:
+    warning: 3
+    error: 2
+  max_length:
+    warning: 40
+    error: 60
+  excluded:
+    - ID
+    - URL
+
+identifier_name:
+  excluded:
+    - id
+    - URL
+
+# Disable rules you don’t want to enforce
+disabled_rules:
+  - trailing_whitespace
+  - todo
+  - legacy_objc_type
+
+# Output format
+reporter: xcode
