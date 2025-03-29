@@ -51,12 +51,12 @@ public struct RingBuffer<T: Sendable> {
     
     /// Indicates whether the buffer is full.
     public var isFull: Bool {
-        return count == capacity
+        count == capacity
     }
     
     /// The number of elements currently stored in the buffer.
     public var currentCount: Int {
-        return count
+        count
     }
     
     /// Appends a new element to the buffer.
