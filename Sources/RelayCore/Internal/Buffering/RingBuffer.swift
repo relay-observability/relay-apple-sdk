@@ -11,95 +11,82 @@
 
 import Foundation
 
-/// A high-performance, overwrite-safe, circular buffer for storing events in memory.
-/// This structure is designed for use in an actor-based context, ensuring thread-safe access when wrapped in an actor.
-/// It supports two drop policies:
-/// - `.dropOldest`: Overwrite the oldest element when the buffer is full.
-/// - `.dropNewest`: Ignore the new element when the buffer is full.
-public struct RingBuffer<T: Sendable> {
-    
-    /// The policy used when the buffer is full.
-    public enum DropPolicy {
-        case dropOldest
-        case dropNewest
-    }
-    
+/// A thread-safe, actor-based ring buffer with fixed capacity.
+/// - Note: The element type must conform to `Sendable` for safe concurrent usage.
+actor RingBuffer<T: Sendable> {
     private var buffer: [T?]
     private var head: Int = 0
-    private var count: Int = 0
-    
-    /// The maximum number of elements the buffer can hold.
-    public let capacity: Int
-    /// The drop policy applied when the buffer is full.
-    public let dropPolicy: DropPolicy
-    
-    /// Creates a new ring buffer with the given capacity and drop policy.
-    /// - Parameters:
-    ///   - capacity: The fixed capacity of the buffer. Must be greater than 0.
-    ///   - dropPolicy: The policy to apply when the buffer is full. Defaults to `.dropOldest`.
-    public init(capacity: Int, dropPolicy: DropPolicy = .dropOldest) {
-        precondition(capacity > 0, "Capacity must be greater than 0")
+    private var tail: Int = 0
+    private var isBufferFull: Bool = false
+    private let capacity: Int
+
+    /// Optionally tracks how many elements were dropped due to the buffer being full.
+    private(set) var droppedElements: Int = 0
+
+    /// Creates a new ring buffer with the specified capacity.
+    /// - Parameter capacity: The maximum number of elements the buffer can hold.
+    init(capacity: Int) {
+        precondition(capacity > 0, "Capacity must be greater than zero")
         self.capacity = capacity
-        self.dropPolicy = dropPolicy
         self.buffer = Array(repeating: nil, count: capacity)
     }
-    
-    // swiftformat:disable all
 
-    /// Indicates whether the buffer is empty.
-    public var isEmpty: Bool {
-        count == 0
-    }
-    // swiftformat:enable all
-    
-    /// Indicates whether the buffer is full.
-    public var isFull: Bool {
-        count == capacity
-    }
-    
-    /// The number of elements currently stored in the buffer.
-    public var currentCount: Int {
-        count
-    }
-    
-    /// Appends a new element to the buffer.
-    /// - Parameter element: The element to append.
-    /// - Note: If the buffer is full, the behavior depends on the `dropPolicy`.
-    public mutating func append(_ element: T) {
+    /// Enqueues an element into the ring buffer.
+    /// - Parameter element: The element to add.
+    /// - Returns: `true` if the element was enqueued; `false` if the buffer is full.
+    @discardableResult
+    func enqueue(_ element: T) -> Bool {
         if isFull {
-            switch dropPolicy {
-            case .dropOldest:
-                // Overwrite the oldest element.
-                buffer[head] = element
-                head = (head + 1) % capacity
-            case .dropNewest:
-                // Ignore the new element.
-                return
-            }
-        } else {
-            let index = (head + count) % capacity
-            buffer[index] = element
-            count += 1
+            droppedElements += 1
+            return false
         }
-    }
-    
-    /// Returns a snapshot of the buffer's current elements in order.
-    /// - Returns: An array containing the buffered elements in FIFO order.
-    public func snapshot() -> [T] {
-        var result = [T]()
-        for i in 0..<count {
-            let index = (head + i) % capacity
-            if let element = buffer[index] {
-                result.append(element)
-            }
+        buffer[tail] = element
+        tail = (tail + 1) % capacity
+        if tail == head {
+            isBufferFull = true
         }
-        return result
+        return true
     }
-    
-    /// Clears all elements from the buffer.
-    public mutating func clear() {
-        buffer = Array(repeating: nil, count: capacity)
-        head = 0
-        count = 0
+
+    /// Dequeues an element from the buffer.
+    /// - Returns: The dequeued element, or `nil` if the buffer is empty.
+    func dequeue() -> T? {
+        guard !isEmpty else { return nil }
+        let element = buffer[head]
+        buffer[head] = nil  // Clear the slot to aid memory management.
+        head = (head + 1) % capacity
+        isBufferFull = false
+        return element
+    }
+
+    /// Indicates whether the ring buffer is empty.
+    var isEmpty: Bool {
+        head == tail && !isBufferFull
+    }
+
+    /// Indicates whether the ring buffer is full.
+    var isFull: Bool {
+        head == tail && isBufferFull
+    }
+
+    /// The current number of elements in the buffer.
+    var count: Int {
+        if isBufferFull {
+            return capacity
+        }
+        if tail >= head {
+            return tail - head
+        }
+        return capacity - head + tail
+    }
+
+    /// Flushes all elements from the buffer in FIFO order.
+    /// - Returns: An array containing all dequeued elements.
+    func flush() -> [T] {
+        var elements: [T] = []
+        while let element = dequeue() {
+            elements.append(element)
+        }
+        return elements
     }
 }
