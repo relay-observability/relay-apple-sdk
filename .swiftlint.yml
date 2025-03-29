@@ -14,7 +14,7 @@ excluded:
 
 analyzer_rules:
   - unused_declaration
-  
+
 # Enable strict, modern Swift rules
 opt_in_rules:
   - attributes
@@ -32,7 +32,6 @@ opt_in_rules:
   - toggle_bool
   - trailing_closure
   - unowned_variable_capture
-  - unused_declaration
   - vertical_parameter_alignment_on_call
   - yoda_condition
 
