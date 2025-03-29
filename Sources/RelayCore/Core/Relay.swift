@@ -10,7 +10,4 @@
 //
 
 /// The main entry point for configuring and interacting with Relay.
-public enum Relay {
-    case one
-    case two
-}
+public enum Relay {}
