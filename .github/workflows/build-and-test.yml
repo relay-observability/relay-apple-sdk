@@ -1,0 +1,25 @@
+name: Build & Test (iOS)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test (iOS)
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Xcode
+      run: sudo xcode-select -s /Applications/Xcode_16_1.0.app || true
+
+    - name: Build using SwiftPM
+      run: swift build -v
+
+    - name: Run Unit Tests
+      run: swift test --parallel

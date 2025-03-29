@@ -3,16 +3,12 @@
 Thank you for your interest in improving Relay!  
 We're building a composable, vendor-neutral observability SDK for iOS — and we’d love your help.
 
----
-
 ## 🧠 Philosophy
 
 Relay is designed to:
 - Automatically capture performance and behavioral signals
 - Enhance existing SDKs (not replace them)
 - Be clean, composable, and developer-friendly
-
----
 
 ## 🛠 How to Contribute
 
@@ -50,8 +46,6 @@ Please link to any related issues and include:
 - Why it’s needed
 - Any relevant screenshots or tests
 
----
-
 ## 🔍 Where to Contribute
 
 - `RelayCore`: Core models and config
@@ -62,26 +56,18 @@ Please link to any related issues and include:
 - `RelayExporters`: Console, OTel, and custom exporters
 - `RelayPlayground`: Tools to simulate signal emission for testing
 
----
-
 ## 🧪 Testing
 
 Each module should have its own test target under `/Tests`.  
 Use `XCTest`, and if mocking is required, prefer protocol-based injection.
 
----
-
 ## 💬 Questions or Ideas?
 
 Open an [issue](https://github.com/calube/relay/issues) or start a [discussion](https://github.com/calube/relay/discussions) — we're always open to good ideas.
-
----
 
 ## 🧾 License
 
 Relay is [MIT licensed](../LICENSE.md).  
 By contributing, you agree to license your contributions under the same.
-
----
 
 Thanks for being part of this project — let’s build something amazing.
