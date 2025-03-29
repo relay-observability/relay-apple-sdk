@@ -41,12 +41,16 @@ final class RelayEventBufferTests: XCTestCase {
         }
     }
 
+    /// This test validates the thread-safety of RelayEventBuffer.add(_:) under high concurrency.
+    /// Correct drop policy under overflow (.dropOldest)
+    /// Accurate flush behavior -- doesn't duplicate or miss records beyond buffer limits
     func testConcurrentAdds() async throws {
         let writer = MockWriter()
         let buffer = RelayEventBuffer(capacity: 100, writer: writer)
         let addCount = 1000
 
-        // Concurrently add events to the buffer.
+        // Spawn 1,000 concurrent tasks, each adding their own mock event.
+        // This stresses thread-safety and tests how the buffer handles concurrent writes.
         await withTaskGroup(of: Void.self) { group in
             for i in 0..<addCount {
                 group.addTask {
@@ -55,9 +59,12 @@ final class RelayEventBufferTests: XCTestCase {
             }
         }
 
+        // Triggers a flush: the buffer sends all currently-held events to the writer.
         await buffer.flush()
 
+        // Asserts that only one batch of events was written to the writer.
         // With a capacity of 100 and using .dropOldest policy, expect only the last 100 events.
+        // The other 900 events were dropped to make room for the last 100.
         XCTAssertEqual(writer.captured.count, 1, "Expected one flush call")
         let events = writer.captured.first ?? []
         XCTAssertEqual(events.count, 100, "Expected buffer to hold 100 events due to capacity")

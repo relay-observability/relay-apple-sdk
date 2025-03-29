@@ -46,7 +46,7 @@ public struct RingBuffer<T: Sendable> {
     
     /// Indicates whether the buffer is empty.
     public var isEmpty: Bool {
-        return isEmpty
+        isEmpty
     }
     
     /// Indicates whether the buffer is full.
