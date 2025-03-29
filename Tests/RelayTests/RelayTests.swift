@@ -1,8 +1,8 @@
-@testable import RelayCore
+@testable import Relay
 import XCTest
 
 final class RelayTests: XCTestCase {
     func test_validTest() {
-        XCTAssertTrue(true)
+        XCTAssertEqual(Relay.one.rawValue, 1)
     }
 }
