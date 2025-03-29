@@ -12,6 +12,9 @@ excluded:
   - .build
   - Generated
 
+analyzer_rules:
+  - unused_declaration
+  
 # Enable strict, modern Swift rules
 opt_in_rules:
   - attributes
