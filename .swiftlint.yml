@@ -62,12 +62,6 @@ identifier_name:
     warning: 40
     error: 60
 
-# identifier_name:
-#   allowed_identifiers: ["i", "j", "x", "y"]
-#   excluded:
-#     - id
-#     - URL
-
 # Disable rules you don’t want to enforce
 disabled_rules:
   - trailing_whitespace
