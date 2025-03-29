@@ -3,8 +3,6 @@
 **Relay** is a modular, composable, vendor-neutral observability SDK for iOS.  
 It’s built to enhance — not replace — existing performance, analytics, and tracing tools.
 
----
-
 ## 🎯 Goals
 
 - **Automatic Performance Profiling**: For Core Data, SwiftData, GRDB, and UI interactions.
@@ -12,8 +10,6 @@ It’s built to enhance — not replace — existing performance, analytics, and
 - **Exporter-First Design**: Route signals to OpenTelemetry, Datadog, analytics SDKs, or custom systems.
 - **Low Noise**: Tunable sampling and filtering built-in.
 - **Runtime Configurable**: Kill switches and signal routing can be toggled remotely.
-
----
 
 ## 🔧 Architecture Overview
 
@@ -30,8 +26,6 @@ It’s built to enhance — not replace — existing performance, analytics, and
 - **SamplingPolicy**: Determines if a signal should be recorded
 - **NoiseReducer**: Filters or deduplicates noisy signals
 - **Exporter**: Forwards data to other SDKs or logging systems
-
----
 
 ## 🧱 Modules
 
@@ -58,8 +52,6 @@ It’s built to enhance — not replace — existing performance, analytics, and
 
 - `RelayPlayground`: Developer-only module to simulate observability signals for testing dashboards, CI, and integrations
 
----
-
 ## 🔌 Exporter System
 
 Relay emits its own internal events (e.g., `DBProfileEvent`, `InteractionEvent`, `ContextualError`).  
@@ -79,8 +71,6 @@ Relay.configure {
 }
 ```
 
----
-
 ## 🧠 Smart Sampling + Kill Switch
 
 Relay includes:
@@ -95,8 +85,6 @@ Relay.configure {
 }
 ```
 
----
-
 ## 🛣 Roadmap (Phases)
 
 | Phase | Deliverables |
@@ -107,8 +95,6 @@ Relay.configure {
 | 4     | SwiftUI instrumentation + Relay Playground |
 | 5     | Mobile SDK dependency tracking |
 | 6     | OSS launch & docs |
-
----
 
 ## 🔭 Future Direction
 

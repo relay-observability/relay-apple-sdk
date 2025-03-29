@@ -3,8 +3,6 @@
 **Relay** is a modular, vendor-neutral observability SDK for iOS apps.  
 It automatically instruments performance and behavioral signals — and routes them wherever you already observe your app.
 
----
-
 ## ✨ Why Relay?
 
 Most apps already use multiple SDKs for analytics, performance, crash reporting, and logs.  
@@ -17,7 +15,6 @@ Most apps already use multiple SDKs for analytics, performance, crash reporting,
 - 🚦 **Kill Switch Support** — Runtime toggle for any plugin
 - 🧰 **Developer Playground** — Simulate observability signals in dev without shipping
 
----
 
 ## 🧱 Architecture
 
@@ -29,8 +26,6 @@ Most apps already use multiple SDKs for analytics, performance, crash reporting,
 ```
 
 Each Relay plugin captures observability signals for a specific domain and sends them through your configured pipeline.
-
----
 
 ## 🔌 Example Usage
 
@@ -48,8 +43,6 @@ Relay.configure {
 Relay.register(plugin: GRDBProfilerPlugin())
 ```
 
----
-
 ## 📦 Modules
 
 - **RelayCore** – Shared event models, configuration, and exporter protocols
@@ -64,8 +57,6 @@ Relay.register(plugin: GRDBProfilerPlugin())
   - `OpenTelemetry` – Forwards spans to OTel
 - **RelayPlayground** – In-app observability simulator for dev/test environments
 
----
-
 ## 🛠 Installation
 
 **Swift Package Manager**
@@ -73,8 +64,6 @@ Relay.register(plugin: GRDBProfilerPlugin())
 ```swift
 .package(url: "https://github.com/calube/relay.git", from: "0.1.0")
 ```
-
----
 
 ## 🔭 Roadmap
 
@@ -87,20 +76,14 @@ Relay.register(plugin: GRDBProfilerPlugin())
 - [ ] Relay Playground module
 - [ ] OSS Launch 🚀
 
----
-
 ## 🤝 Contributing
 
 We love contributions!  
 Start by checking out [`Docs/DESIGN.md`](./Docs/DESIGN.md) and opening an issue or discussion.
 
----
-
 ## 🧪 License
 
 MIT — open and extensible. Build something better with us.
-
----
 
 ## 🛰 Built for:
 - Engineers who care about performance and clarity
