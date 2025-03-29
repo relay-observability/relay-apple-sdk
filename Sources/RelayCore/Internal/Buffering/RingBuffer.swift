@@ -44,12 +44,13 @@ public struct RingBuffer<T: Sendable> {
         self.buffer = Array(repeating: nil, count: capacity)
     }
     
+    // swiftformat:disable all
+
     /// Indicates whether the buffer is empty.
     public var isEmpty: Bool {
-        // swiftformat:disable
         count == 0
-        // swiftformat:enable
     }
+    // swiftformat:enable all
     
     /// Indicates whether the buffer is full.
     public var isFull: Bool {
