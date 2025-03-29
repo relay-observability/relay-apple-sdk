@@ -32,3 +32,6 @@ lint:
 
 format:
 	swiftformat --lint Sources/ Tests/
+
+coverage:
+	./scripts/coverage.sh
