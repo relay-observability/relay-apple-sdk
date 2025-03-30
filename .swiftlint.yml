@@ -11,6 +11,7 @@ excluded:
   - Pods
   - .build
   - Generated
+  - Sources/RelayCore/Internal/Utils/Data+Gzip.swift
 
 analyzer_rules:
   - unused_declaration

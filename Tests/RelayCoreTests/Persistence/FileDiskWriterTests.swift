@@ -1,6 +1,6 @@
 //
-//  Relay.swift
-//  Relay
+//  FileDiskWriterTests.swift
+//  RelayCoreTests
 //
 //  Created on March 30, 2025 as part of the Relay open-source observability SDK.
 //  Copyright © 2025 Relay Contributors. All rights reserved.
@@ -9,6 +9,7 @@
 //  See LICENSE.md in the project root for license information.
 //
 
-public enum Relay: Int {
-    case one = 1
-}
+import XCTest
+@testable import RelayCore
+
+final class FileDiskWriterTests: XCTestCase {}

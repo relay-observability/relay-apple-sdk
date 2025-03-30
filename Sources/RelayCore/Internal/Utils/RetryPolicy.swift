@@ -2,7 +2,7 @@
 //  RetryPolicy.swift
 //  RelayCore
 //
-//  Created on March 28, 2025 as part of the Relay open-source observability SDK.
+//  Created on March 30, 2025 as part of the Relay open-source observability SDK.
 //  Copyright © 2025 Relay Contributors. All rights reserved.
 //
 //  Licensed under the MIT License.
@@ -11,8 +11,9 @@
 
 import Foundation
 
-public enum RetryPolicy {
+public enum RetryPolicy: Sendable {
     case none
+    case immediate(maxAttempts: Int)
     case exponentialBackoff(retries: Int, initialDelay: TimeInterval)
-    case custom((_ error: Error) -> Bool)
+    case custom(@Sendable (_ error: Error) -> Bool)
 }
