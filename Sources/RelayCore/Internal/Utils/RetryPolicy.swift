@@ -11,8 +11,9 @@
 
 import Foundation
 
-public enum RetryPolicy {
+public enum RetryPolicy: Sendable {
     case none
+    case immediate(maxAttempts: Int)
     case exponentialBackoff(retries: Int, initialDelay: TimeInterval)
-    case custom((_ error: Error) -> Bool)
+    case custom(@Sendable (_ error: Error) -> Bool)
 }
