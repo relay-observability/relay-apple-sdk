@@ -12,18 +12,21 @@
 import Foundation
 
 /// A simple, pluggable serializer that encodes an array of `RelayEvent` into JSON `Data`.
-public final class JSONEventSerializer: EventSerializer {
+struct JSONEventSerializer: EventSerializer {
+    private let debug: Bool
 
-    private let encoder: JSONEncoder
-
-    public init(prettyPrinted: Bool = false) {
-        self.encoder = JSONEncoder()
-        if prettyPrinted {
-            self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        }
+    private var outputFormat: JSONEncoder.OutputFormatting {
+        debug ? [.prettyPrinted, .sortedKeys] : []
     }
 
-    public func encode(_ events: [RelayEvent]) throws -> Data {
+    func encode(_ events: [RelayEvent]) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = outputFormat
         return try encoder.encode(events)
+    }
+
+    func decode(_ data: Data) throws -> [RelayEvent] {
+        let decoder = JSONDecoder()
+        return try decoder.decode([RelayEvent].self, from: data)
     }
 }
