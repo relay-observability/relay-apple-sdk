@@ -20,8 +20,7 @@ final actor CleanupManager {
     init(directory: URL,
          fileSystem: FileSystem,
          config: FileDiskWriterConfiguration,
-         cleanupErrorHandler: ((Error) -> Void)? = nil)
-    {
+         cleanupErrorHandler: ((Error) -> Void)? = nil) {
         self.directory = directory
         self.fileSystem = fileSystem
         self.config = config
@@ -47,8 +46,7 @@ final actor CleanupManager {
             for file in files {
                 if let attributes = try? fileSystem.attributesOfItem(atPath: file.path),
                    let creationDate = attributes[.creationDate] as? Date,
-                   creationDate < expirationDate
-                {
+                   creationDate < expirationDate {
                     try fileSystem.removeItem(at: file)
                 }
             }
@@ -65,8 +63,7 @@ final actor CleanupManager {
             for file in remainingFiles {
                 let attrs = try fileSystem.attributesOfItem(atPath: file.path)
                 if let size = attrs[.size] as? Int,
-                   let creationDate = attrs[.creationDate] as? Date
-                {
+                   let creationDate = attrs[.creationDate] as? Date {
                     totalUsage += size
                     fileInfos.append(FileInfo(fileURL: file, fileSize: size, creationDate: creationDate))
                 }

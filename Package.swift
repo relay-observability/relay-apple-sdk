@@ -5,11 +5,11 @@ let package = Package(
     name: "Relay",
     platforms: [
         .iOS(.v14),
-        .macOS(.v11),
+        .macOS(.v11)
     ],
     products: [
         .library(name: "Relay", targets: ["Relay"]),
-        .library(name: "RelayCore", targets: ["RelayCore"]),
+        .library(name: "RelayCore", targets: ["RelayCore"])
     ],
     dependencies: [
         // Add external dependencies here
@@ -30,6 +30,6 @@ let package = Package(
         .testTarget(
             name: "RelayTests",
             dependencies: ["Relay"]
-        ),
+        )
     ]
 )

@@ -32,7 +32,7 @@ struct StressProfile {
         .burstTraffic,
         .tinyBuffer,
         .compression,
-        .ciMode,
+        .ciMode
     ]
 
     static let baseline = StressProfile(

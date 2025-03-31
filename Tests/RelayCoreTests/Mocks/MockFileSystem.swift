@@ -30,8 +30,7 @@ final class MockFileSystem: FileSystem {
 
     func contentsOfDirectory(at _: URL,
                              includingPropertiesForKeys _: [URLResourceKey]?,
-                             options _: FileManager.DirectoryEnumerationOptions) throws -> [URL]
-    {
+                             options _: FileManager.DirectoryEnumerationOptions) throws -> [URL] {
         return Array(files.keys)
     }
 
@@ -43,7 +42,7 @@ final class MockFileSystem: FileSystem {
         // For simplicity, we'll assign a fixed creation date.
         return [
             .size: data.count,
-            .creationDate: Date(timeIntervalSince1970: 1000), // fixed value for tests
+            .creationDate: Date(timeIntervalSince1970: 1000) // fixed value for tests
         ]
     }
 
