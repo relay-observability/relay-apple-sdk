@@ -79,7 +79,7 @@ actor MetricsTracker {
     private func percentile(_ values: [TimeInterval], _ percentile: Double) -> TimeInterval {
         guard !values.isEmpty else { return 0 }
         let sorted = values.sorted()
-        let rank = Int((Double(sorted.count - 1)) * percentile)
+        let rank = Int(Double(sorted.count - 1) * percentile)
         return sorted[rank]
     }
 }

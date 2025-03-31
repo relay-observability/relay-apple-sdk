@@ -28,12 +28,12 @@ public struct FileDiskWriterConfiguration: Sendable {
     public let fileNamingStrategy: FileNamingStrategy
     /// Emits metrics about the SDK.
     public let metricsEmitter: MetricsEmitter
-    
+
     public init(
-        maxFileSize: Int = 1_000_000,                           // 1 MB per file
-        maxEventsPerFile: Int = 1000,                           // 1000 events per file
-        maxTotalDiskUsage: Int = 10_000_000,                    // 10 MB total storage for files
-        fileRetentionDuration: TimeInterval = 7 * 24 * 3600,    // 7 days
+        maxFileSize: Int = 1_000_000, // 1 MB per file
+        maxEventsPerFile: Int = 1000, // 1000 events per file
+        maxTotalDiskUsage: Int = 10_000_000, // 10 MB total storage for files
+        fileRetentionDuration: TimeInterval = 7 * 24 * 3600, // 7 days
         metricsEmitter: MetricsEmitter = NoOpMetricsEmitter(),
         fileNamingStrategy: @escaping FileNamingStrategy = { date in
             // Default: use timestamp-based file naming with a unique UUID to avoid collisions with .dat extension
@@ -47,7 +47,7 @@ public struct FileDiskWriterConfiguration: Sendable {
         self.metricsEmitter = metricsEmitter
         self.fileNamingStrategy = fileNamingStrategy
     }
-    
+
     // TODO: Decide if this I want to provide configurations or just suggest the default to reduce the number of configurations needed
     public static let `default`: FileDiskWriterConfiguration = .init()
 }

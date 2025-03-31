@@ -29,7 +29,7 @@ public protocol FileWriting: Sendable {
 /// The default implementation of FileWriting using FileHandle and Data.write.
 public struct DefaultFileWriter: FileWriting {
     public init() {}
-    
+
     public func append(data: Data, to url: URL) throws {
         // Attempt to open the file for appending.
         if let handle = try? FileHandle(forWritingTo: url) {
@@ -43,7 +43,7 @@ public struct DefaultFileWriter: FileWriting {
             try data.write(to: url, options: [.atomic])
         }
     }
-    
+
     public func writeAtomically(data: Data, to url: URL, options: Data.WritingOptions = [.atomic]) throws {
         try data.write(to: url, options: options)
     }

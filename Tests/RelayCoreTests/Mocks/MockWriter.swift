@@ -32,9 +32,9 @@ final class MockWriter: EventPersisting {
 final class MockFileStore: @unchecked Sendable {
     /// Stores file data mapped by URL.
     var files: [URL: Data] = [:]
-    
+
     public init() {}
-    
+
     /// Simulates appending data to a file.
     func append(data: Data, to url: URL) throws {
         if let existingData = files[url] {
@@ -43,9 +43,9 @@ final class MockFileStore: @unchecked Sendable {
             files[url] = data
         }
     }
-    
+
     /// Simulates an atomic write to a file.
-    func writeAtomically(data: Data, to url: URL, options: Data.WritingOptions = [.atomic]) throws {
+    func writeAtomically(data: Data, to url: URL, options _: Data.WritingOptions = [.atomic]) throws {
         files[url] = data
     }
 }
@@ -57,11 +57,11 @@ struct MockFileWriter: FileWriting {
     init(fileStore: MockFileStore = MockFileStore()) {
         self.fileStore = fileStore
     }
-    
+
     func append(data: Data, to url: URL) throws {
         try fileStore.append(data: data, to: url)
     }
-    
+
     func writeAtomically(data: Data, to url: URL, options: Data.WritingOptions = [.atomic]) throws {
         try fileStore.writeAtomically(data: data, to: url, options: options)
     }

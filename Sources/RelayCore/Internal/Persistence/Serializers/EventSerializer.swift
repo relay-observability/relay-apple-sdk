@@ -13,6 +13,6 @@ import Foundation
 
 public protocol EventSerializer {
     func encode(_ events: [RelayEvent]) throws -> Data
-    
+
     func decode(_ data: Data) throws -> [RelayEvent]
 }

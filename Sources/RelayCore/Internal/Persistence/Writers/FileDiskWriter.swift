@@ -15,9 +15,8 @@ import Foundation
 /// It rotates files when a file reaches the configured limits and delegates cleanup to a separate actor.
 /// The file writer supports configurable retry logic for transient write failures.
 final actor FileDiskWriter: EventPersisting {
-    
     // MARK: - Types
-    
+
     /// Errors thrown by the FileDiskWriter.
     enum Error: Swift.Error, Sendable {
         /// Indicates that there is no current file available.
@@ -25,7 +24,7 @@ final actor FileDiskWriter: EventPersisting {
         /// Indicates that file creation failed, along with a description.
         case fileCreationFailed(reason: String)
     }
-    
+
     /// Structure representing the current file being written to.
     private struct CurrentFile {
         /// The file URL.
@@ -35,9 +34,9 @@ final actor FileDiskWriter: EventPersisting {
         /// The current file size in bytes.
         var size: Int
     }
-    
+
     // MARK: - Dependencies and Configuration
-    
+
     private let directory: URL
     private let serializer: EventSerializer
     private let retryPolicy: RetryPolicy
@@ -45,12 +44,12 @@ final actor FileDiskWriter: EventPersisting {
     private let fileSystem: FileSystem
     private let config: FileDiskWriterConfiguration
     private let cleanupManager: CleanupManager
-    
+
     /// Holds the current file metadata.
     private var currentFile: CurrentFile?
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new FileDiskWriter.
     ///
     /// - Parameters:
@@ -78,9 +77,9 @@ final actor FileDiskWriter: EventPersisting {
         self.config = config
         self.cleanupManager = cleanupManager
     }
-    
+
     // MARK: - Methods
-    
+
     /// Writes a batch of events to disk.
     ///
     /// This method encodes the events, rotates files if needed (based on size and event count),
@@ -91,21 +90,21 @@ final actor FileDiskWriter: EventPersisting {
         do {
             let data = try serializer.encode(events)
             try await rotateFileIfNeeded(newDataSize: data.count, newEventCount: events.count)
-            
+
             guard let file = currentFile else {
                 throw Error.noCurrentFile
             }
-            
+
             // Attempt to write data with retry logic.
             try await attemptWrite(data: data, to: file.url)
-            
+
             // Update current file state.
             currentFile?.eventCount += events.count
             currentFile?.size += data.count
-            
+
             // Emit a metric for a successful write.
             config.metricsEmitter.emitMetric(name: "file.write.success", value: Double(events.count), tags: nil)
-            
+
             // Delegate cleanup to the CleanupManager.
             await cleanupManager.performCleanup()
         } catch {
@@ -115,17 +114,17 @@ final actor FileDiskWriter: EventPersisting {
                 value: 1,
                 tags: ["error": .string(FileWriteFailureReason(error: error).rawValue)]
             )
-            
+
             // In production, replace prints with a proper error handler.
             print("❌ Failed to write events: \(error)")
             print("❌ Failure Reason: \(FileWriteFailureReason(error: error).rawValue)")
-            
+
             // TODO: Additional retry or error handling could be implemented here.
         }
     }
-    
+
     // MARK: - Private Methods
-    
+
     /// Rotates the current file if appending new data would exceed configured limits.
     ///
     /// - Parameters:
@@ -138,14 +137,14 @@ final actor FileDiskWriter: EventPersisting {
             currentFile = try createNewFile()
             return
         }
-        
+
         guard let file = currentFile else { return }
-        
+
         let rotationPolicy = FileRotationPolicy(
             maxSize: config.maxFileSize,
             maxEvents: config.maxEventsPerFile
         )
-        
+
         if rotationPolicy.shouldRotate(
             currentSize: file.size,
             currentEvents: file.eventCount,
@@ -156,7 +155,7 @@ final actor FileDiskWriter: EventPersisting {
             config.metricsEmitter.emitMetric(name: "file.rotation", value: 1, tags: nil)
         }
     }
-    
+
     /// Creates a new file for writing events.
     ///
     /// - Returns: A `CurrentFile` representing the newly created file.
@@ -172,7 +171,7 @@ final actor FileDiskWriter: EventPersisting {
         }
         return CurrentFile(url: fileURL, eventCount: 0, size: 0)
     }
-    
+
     /// Attempts to write data to the specified file URL using the injected file system.
     ///
     /// This method implements retry logic based on the configured `retryPolicy`. Depending on the policy,
@@ -187,20 +186,20 @@ final actor FileDiskWriter: EventPersisting {
         var attempt = 0
         var delay: UInt64 = 0
         let maxAttempts: Int
-        
+
         switch retryPolicy {
         case .none:
             maxAttempts = 1
-        case .immediate(let attempts):
+        case let .immediate(attempts):
             maxAttempts = attempts
-        case .exponentialBackoff(let retries, let initialDelay):
+        case let .exponentialBackoff(retries, initialDelay):
             maxAttempts = retries
             delay = UInt64(initialDelay * 1_000_000_000) // convert seconds to nanoseconds
         case .custom:
             // For custom policies, default to immediate retries.
             maxAttempts = 3
         }
-        
+
         while attempt < maxAttempts {
             do {
                 try await scheduler.schedule {

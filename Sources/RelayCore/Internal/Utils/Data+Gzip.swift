@@ -21,14 +21,12 @@ import struct Foundation.Data
 import zlib
 
 enum Gzip {
-
     /// Maximum value for windowBits (`MAX_WBITS`)
     public static let maxWindowBits = MAX_WBITS
 }
 
 /// Compression level whose rawValue is based on the zlib's constants.
 struct CompressionLevel: RawRepresentable, Sendable {
-
     /// Compression level in the range of `0` (no compression) to `9` (maximum compression).
     public let rawValue: Int32
 
@@ -39,12 +37,10 @@ struct CompressionLevel: RawRepresentable, Sendable {
     public static let defaultCompression = Self(Z_DEFAULT_COMPRESSION)
 
     public init(rawValue: Int32) {
-
         self.rawValue = rawValue
     }
 
     public init(_ rawValue: Int32) {
-
         self.rawValue = rawValue
     }
 }
@@ -92,22 +88,18 @@ struct GzipError: Swift.Error, Sendable {
     /// Returned message by zlib.
     public let message: String
 
-    internal init(code: Int32, msg: UnsafePointer<CChar>?) {
-
-        self.message = msg.flatMap(String.init(validatingUTF8:)) ?? "Unknown gzip error"
-        self.kind = Kind(code: code)
+    init(code: Int32, msg: UnsafePointer<CChar>?) {
+        message = msg.flatMap(String.init(validatingUTF8:)) ?? "Unknown gzip error"
+        kind = Kind(code: code)
     }
 
     public var localizedDescription: String {
-
-        return self.message
+        return message
     }
 }
 
 private extension GzipError.Kind {
-
     init(code: Int32) {
-
         switch code {
         case Z_STREAM_ERROR:
             self = .stream
@@ -126,10 +118,9 @@ private extension GzipError.Kind {
 }
 
 extension Data {
-
     /// Whether the receiver is compressed in gzip format.
     var isGzipped: Bool {
-        return self.starts(with: [0x1f, 0x8b])  // check magic number
+        return starts(with: [0x1F, 0x8B]) // check magic number
     }
 
     /// Create a new `Data` instance by compressing the receiver using zlib.
@@ -150,8 +141,7 @@ extension Data {
         level: CompressionLevel = .defaultCompression,
         wBits: Int32 = Gzip.maxWindowBits + 16
     ) throws -> Data {
-
-        guard !self.isEmpty else {
+        guard !isEmpty else {
             return Data()
         }
 
@@ -184,10 +174,10 @@ extension Data {
                 data.count += DataSize.chunk
             }
 
-            let inputCount = self.count
+            let inputCount = count
             let outputCount = data.count
 
-            self.withUnsafeBytes { (inputPointer: UnsafeRawBufferPointer) in
+            withUnsafeBytes { (inputPointer: UnsafeRawBufferPointer) in
                 stream.next_in = UnsafeMutablePointer<Bytef>(
                     mutating: inputPointer.bindMemory(to: Bytef.self)
                         .baseAddress!
@@ -234,12 +224,11 @@ extension Data {
     /// - Returns: Gzip-decompressed `Data` instance.
     /// - Throws: `GzipError`
     func gunzipped(wBits: Int32 = Gzip.maxWindowBits + 32) throws -> Data {
-
-        guard !self.isEmpty else {
+        guard !isEmpty else {
             return Data()
         }
 
-        var data = Data(capacity: self.count * 2)
+        var data = Data(capacity: count * 2)
         var totalIn: uLong = 0
         var totalOut: uLong = 0
 
@@ -260,13 +249,13 @@ extension Data {
 
             repeat {
                 if Int(totalOut + stream.total_out) >= data.count {
-                    data.count += self.count / 2
+                    data.count += count / 2
                 }
 
-                let inputCount = self.count
+                let inputCount = count
                 let outputCount = data.count
 
-                self.withUnsafeBytes { (inputPointer: UnsafeRawBufferPointer) in
+                withUnsafeBytes { (inputPointer: UnsafeRawBufferPointer) in
                     let inputStartPosition = totalIn + stream.total_in
                     stream.next_in = UnsafeMutablePointer<Bytef>(mutating: inputPointer
                         .bindMemory(to: Bytef.self)
@@ -288,7 +277,7 @@ extension Data {
 
                     stream.next_in = nil
                 }
-            } while (status == Z_OK)
+            } while status == Z_OK
 
             totalIn += stream.total_in
 
@@ -303,7 +292,7 @@ extension Data {
 
             totalOut += stream.total_out
 
-        } while (totalIn < self.count)
+        } while totalIn < count
 
         data.count = Int(totalOut)
 
@@ -312,7 +301,6 @@ extension Data {
 }
 
 private enum DataSize {
-
     static let chunk = 1 << 14
     static let stream = MemoryLayout<z_stream>.size
 }

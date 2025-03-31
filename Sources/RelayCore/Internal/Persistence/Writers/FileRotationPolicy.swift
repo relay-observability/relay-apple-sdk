@@ -11,6 +11,6 @@ struct FileRotationPolicy {
         newEventCount: Int
     ) -> Bool {
         currentSize + newDataSize > maxSize ||
-               currentEvents + newEventCount > maxEvents
+            currentEvents + newEventCount > maxEvents
     }
 }

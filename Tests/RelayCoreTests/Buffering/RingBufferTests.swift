@@ -9,11 +9,10 @@
 //  See LICENSE.md in the project root for license information.
 //
 
-import XCTest
 @testable import RelayCore
+import XCTest
 
 final class RingBufferTests: XCTestCase {
-
     // Test enqueuing fewer elements than capacity.
     func testEnqueueFewerThanCapacity() async {
         let buffer = RingBuffer<Int>(capacity: 5)
@@ -23,14 +22,14 @@ final class RingBufferTests: XCTestCase {
         XCTAssertTrue(result2)
         let result3 = await buffer.enqueue(30)
         XCTAssertTrue(result3)
-        
+
         let count = await buffer.count
         XCTAssertEqual(count, 3)
         let full = await buffer.isFull
         XCTAssertFalse(full)
         let empty = await buffer.isEmpty
         XCTAssertFalse(empty)
-        
+
         // Verify FIFO order using flush.
         let elements = await buffer.flush()
         XCTAssertEqual(elements, [10, 20, 30])
@@ -39,7 +38,7 @@ final class RingBufferTests: XCTestCase {
         let emptyAfterFlush = await buffer.isEmpty
         XCTAssertTrue(emptyAfterFlush)
     }
-    
+
     // Test enqueuing exactly capacity number of elements.
     func testEnqueueExactlyCapacity() async {
         let buffer = RingBuffer<Int>(capacity: 3)
@@ -49,16 +48,16 @@ final class RingBufferTests: XCTestCase {
         XCTAssertTrue(r2)
         let r3 = await buffer.enqueue(3)
         XCTAssertTrue(r3)
-        
+
         let count = await buffer.count
         XCTAssertEqual(count, 3)
         let full = await buffer.isFull
         XCTAssertTrue(full)
-        
+
         let elements = await buffer.flush()
         XCTAssertEqual(elements, [1, 2, 3])
     }
-    
+
     // Test that when the buffer is full, new events are dropped.
     func testEnqueueWhenFullShouldDropNew() async {
         let buffer = RingBuffer<Int>(capacity: 3)
@@ -68,21 +67,21 @@ final class RingBufferTests: XCTestCase {
         XCTAssertTrue(r2)
         let r3 = await buffer.enqueue(3)
         XCTAssertTrue(r3)
-        
+
         // Buffer is full, so this enqueue should return false.
         let r4 = await buffer.enqueue(4)
         XCTAssertFalse(r4)
-        
+
         let count = await buffer.count
         XCTAssertEqual(count, 3)
         let dropped = await buffer.droppedElements
         XCTAssertEqual(dropped, 1)
-        
+
         // Ensure that the buffer content remains unchanged.
         let elements = await buffer.flush()
         XCTAssertEqual(elements, [1, 2, 3])
     }
-    
+
     // Test that flush empties the buffer.
     func testFlushEmptiesBuffer() async {
         let buffer = RingBuffer<String>(capacity: 3)
@@ -92,16 +91,16 @@ final class RingBufferTests: XCTestCase {
         XCTAssertTrue(r2)
         let r3 = await buffer.enqueue("c")
         XCTAssertTrue(r3)
-        
+
         let elements = await buffer.flush()
         XCTAssertEqual(elements, ["a", "b", "c"])
-        
+
         let count = await buffer.count
         XCTAssertEqual(count, 0)
         let empty = await buffer.isEmpty
         XCTAssertTrue(empty)
     }
-    
+
     // Test the ordering after wrapping.
     func testFlushOrderAfterWrapping() async {
         let buffer = RingBuffer<Int>(capacity: 3)
@@ -114,19 +113,19 @@ final class RingBufferTests: XCTestCase {
         // Attempt to enqueue when full should drop new element.
         let r4 = await buffer.enqueue(4)
         XCTAssertFalse(r4)
-        
+
         let elements = await buffer.flush()
         XCTAssertEqual(elements, [1, 2, 3])
-        
+
         let count = await buffer.count
         XCTAssertEqual(count, 0)
     }
-    
+
     // Test concurrent enqueues to simulate high throughput.
     func testConcurrentEnqueues() async {
         let buffer = RingBuffer<Int>(capacity: 100)
         await withTaskGroup(of: Void.self) { group in
-            for i in 1...200 {
+            for i in 1 ... 200 {
                 group.addTask {
                     _ = await buffer.enqueue(i)
                 }
@@ -137,20 +136,20 @@ final class RingBufferTests: XCTestCase {
         let dropped = await buffer.droppedElements
         XCTAssertEqual(dropped, 100)
     }
-    
+
     // Test that flush is atomic when enqueues and flush occur concurrently.
     func testConcurrentFlushAndEnqueue() async {
         let buffer = RingBuffer<Int>(capacity: 50)
         await withTaskGroup(of: Void.self) { group in
             // Enqueue items concurrently.
-            for i in 1...50 {
+            for i in 1 ... 50 {
                 group.addTask {
                     _ = await buffer.enqueue(i)
                 }
             }
             // Flush concurrently.
             group.addTask {
-                    _ = await buffer.flush()
+                _ = await buffer.flush()
             }
         }
         let count = await buffer.count

@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  GzipCompressor.swift
 //  Relay
 //
 //  Created by Caleb Davis on 3/31/25.

@@ -28,7 +28,7 @@ actor RingBuffer<T: Sendable> {
     init(capacity: Int) {
         precondition(capacity > 0, "Capacity must be greater than zero")
         self.capacity = capacity
-        self.buffer = Array(repeating: nil, count: capacity)
+        buffer = Array(repeating: nil, count: capacity)
     }
 
     /// Enqueues an element into the ring buffer.
@@ -53,7 +53,7 @@ actor RingBuffer<T: Sendable> {
     func dequeue() -> T? {
         guard !isEmpty else { return nil }
         let element = buffer[head]
-        buffer[head] = nil  // Clear the slot to aid memory management.
+        buffer[head] = nil // Clear the slot to aid memory management.
         head = (head + 1) % capacity
         isBufferFull = false
         return element

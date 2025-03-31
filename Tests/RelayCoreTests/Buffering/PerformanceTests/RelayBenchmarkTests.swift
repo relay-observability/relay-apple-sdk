@@ -51,7 +51,7 @@ final class RelayBenchmarkTests: XCTestCase {
             exporterDelay: 0.0
         )
 
-        for i in 1...1000 {
+        for i in 1 ... 1000 {
             let tester = RelayBufferPressureTester(
                 concurrency: profile.concurrency,
                 eventRate: profile.eventRate,
@@ -69,7 +69,6 @@ final class RelayBenchmarkTests: XCTestCase {
             }
         }
 
-        await tracker.report(totalRuns: 1_000)
+        await tracker.report(totalRuns: 1000)
     }
-
 }

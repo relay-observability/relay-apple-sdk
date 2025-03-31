@@ -9,11 +9,10 @@
 //  See LICENSE.md in the project root for license information.
 //
 
-import XCTest
 @testable import RelayCore
+import XCTest
 
 final class RelayEventBufferTests: XCTestCase {
-    
     func testAddAndFlush() async throws {
         let writer = MockWriter()
         let buffer = RelayEventBuffer(capacity: 5, writer: writer)
@@ -36,13 +35,13 @@ final class RelayEventBufferTests: XCTestCase {
 
         // Start periodic flush with a 1-second interval.
         await buffer.startFlush(interval: 1.0)
-        
+
         await buffer.add(RelayEvent.mock(name: "event1"))
         await buffer.add(RelayEvent.mock(name: "event2"))
 
         // Wait 1.5 seconds to allow at least one flush to occur.
         try await Task.sleep(nanoseconds: 1_500_000_000)
-        
+
         // Stop the flush task explicitly in an async context.
         await buffer.stopFlush()
 
@@ -63,7 +62,7 @@ final class RelayEventBufferTests: XCTestCase {
         // Spawn 1,000 concurrent tasks, each adding their own mock event.
         // This stresses thread-safety and tests how the buffer handles concurrent writes.
         await withTaskGroup(of: Void.self) { group in
-            for i in 0..<addCount {
+            for i in 0 ..< addCount {
                 group.addTask {
                     await buffer.add(RelayEvent.mock(name: "event\(i)"))
                 }
@@ -87,12 +86,12 @@ final class RelayEventBufferTests: XCTestCase {
 
         await buffer.startFlush(interval: 1.0)
         await buffer.add(RelayEvent.mock(name: "event1"))
-        
+
         // Wait for one flush cycle.
         try await Task.sleep(nanoseconds: 1_200_000_000)
         await buffer.stopFlush()
         let capturedCountAfterStop = writer.captured.count
-        
+
         // Wait additional time to ensure no new flushes occur.
         try await Task.sleep(nanoseconds: 1_200_000_000)
         XCTAssertEqual(writer.captured.count, capturedCountAfterStop, "Expected no additional flushes after stopFlush")
