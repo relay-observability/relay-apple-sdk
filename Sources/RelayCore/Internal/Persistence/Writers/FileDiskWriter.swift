@@ -226,13 +226,3 @@ final actor FileDiskWriter: EventPersisting {
         }
     }
 }
-
-struct FileRotationPolicy {
-    let maxSize: Int
-    let maxEvents: Int
-
-    func shouldRotate(currentSize: Int, currentEvents: Int, newDataSize: Int, newEventCount: Int) -> Bool {
-        return currentSize + newDataSize > maxSize ||
-               currentEvents + newEventCount > maxEvents
-    }
-}

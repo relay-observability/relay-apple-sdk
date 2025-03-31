@@ -14,6 +14,17 @@ MIT_HEADER_TEMPLATE = """//
 //
 """
 
+HEADER_REGEX = re.compile(r"""
+    ^
+    //\s+[\w\d_]+\.(swift)                # Line 1: filename
+    \n//\s+\w+                            # Line 2: module
+    \n//\s+Created on .+Relay open-source observability SDK\.
+    \n//\s+Copyright © 2025 Relay Contributors\. All rights reserved\.
+    \n//\s+Licensed under the MIT License\.
+    \n//\s+See LICENSE\.md in the project root for license information\.
+    \n//
+    """, re.VERBOSE)
+
 def find_module(path):
     """Finds the module name from Sources/ or Tests/ directory path."""
     parts = path.split(os.sep)
@@ -28,16 +39,18 @@ def find_module(path):
     return "UnknownModule"
 
 def has_existing_header(lines):
-    """Checks if the file already has a Relay MIT header."""
-    header_marker = "Copyright © 2025 Relay Contributors"
-    return any(header_marker in line for line in lines[:10])
+    """Checks if the file already has the full standardized MIT header."""
+    content = "".join(lines[:8])  # read top 8 lines only
+    return HEADER_REGEX.match(content) is not None
 
 def strip_existing_header(lines):
-    """Strips the existing top comment block from the file."""
+    """Strips all leading comment lines and blank lines."""
     end = 0
     for i, line in enumerate(lines):
-        if not line.strip().startswith("//") and not line.strip() == "":
-            end = i
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped == "":
+            end = i + 1
+        else:
             break
     return lines[end:]
 
