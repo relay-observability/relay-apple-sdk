@@ -13,26 +13,20 @@ import Foundation
 import RelayCommon
 
 /// An actor-based file writer that writes batches of events to disk.
-/// It rotates files when a file reaches the configured limits and delegates cleanup to a separate actor.
-/// The file writer now integrates with a robust RetryCoordinator for handling transient write failures.
+/// It rotates files when a file reaches configured limits and delegates cleanup to a separate actor.
+/// It also integrates a `RetryCoordinator` for handling transient write failures.
 final actor FileDiskWriter: EventPersisting {
-    // MARK: - Types
 
-    /// Errors thrown by the FileDiskWriter.
+    // MARK: - Supporting Types
+
     enum Error: Swift.Error, Sendable {
-        /// Indicates that there is no current file available.
         case noCurrentFile
-        /// Indicates that file creation failed, along with a description.
         case fileCreationFailed(reason: String)
     }
 
-    /// Structure representing the current file being written to.
     private struct CurrentFile {
-        /// The file URL.
         let url: URL
-        /// The current number of events written to this file.
         var eventCount: Int
-        /// The current file size in bytes.
         var size: Int
     }
 
@@ -46,11 +40,10 @@ final actor FileDiskWriter: EventPersisting {
     private let config: FileDiskWriterConfiguration
     private let cleanupManager: CleanupManager
     private let retryCoordinator: RetryCoordinator
-    // TODO: This probably needs to be a JIT dependency
-    // TODO: Probably remove this dependency and just pass it into the RetryCoordinator
     private let criticalErrorHandler: CriticalErrorHandler?
 
-    /// Holds the current file metadata.
+    // MARK: - State
+
     private var currentFile: CurrentFile?
 
     // MARK: - Initialization
@@ -70,6 +63,7 @@ final actor FileDiskWriter: EventPersisting {
         directory: URL,
         serializer: EventSerializer,
         retryPolicy: RetryPolicy = .none,
+        retryCoordinator: RetryCoordinator,
         scheduler: Scheduler = DefaultScheduler(),
         fileSystem: FileSystem = DefaultFileSystem(),
         config: FileDiskWriterConfiguration = .init(),
@@ -85,28 +79,11 @@ final actor FileDiskWriter: EventPersisting {
         self.config = config
         self.cleanupManager = cleanupManager
         self.criticalErrorHandler = criticalErrorHandler
-
-        // Instantiate the RetryCoordinator using properties from retryPolicy.
-        self.retryCoordinator = RetryCoordinator(
-            fileSystem: fileSystem,
-            scheduler: scheduler,
-            metricsEmitter: config.metricsEmitter,
-            maxAttempts: config.maxAttempts,
-            baseDelay: config.initialDelay,
-            persistentStorage: persistentStorage,
-            criticalErrorHandler: criticalErrorHandler
-        )
+        self.retryCoordinator = retryCoordinator
     }
 
-    // MARK: - Methods
+    // MARK: - Writing
 
-    /// Writes a batch of events to disk.
-    ///
-    /// This method encodes the events, rotates files if needed,
-    /// attempts to write the data using the RetryCoordinator,
-    /// and then delegates cleanup.
-    ///
-    /// - Parameter events: An array of `RelayEvent` instances to write.
     func write(_ events: [RelayEvent]) async {
         do {
             let data = try serializer.encode(events)
@@ -116,7 +93,6 @@ final actor FileDiskWriter: EventPersisting {
                 throw Error.noCurrentFile
             }
 
-            // Create a PendingWrite and delegate the file append operation to RetryCoordinator.
             await retryCoordinator.enqueue(PendingWrite(data: data, url: file.url))
 
             // Update current file state only on a successful write.
@@ -129,22 +105,20 @@ final actor FileDiskWriter: EventPersisting {
                 tags: nil
             )
 
-            // Delegate cleanup to the CleanupManager.
             await cleanupManager.performCleanup()
         } catch {
-            // Map the error to a human-readable failure reason and emit a failure metric.
             config.metricsEmitter.emitMetric(
                 name: "file.write.failure",
                 value: 1,
                 tags: ["error": .string(FileWriteFailureReason(error: error).rawValue)]
             )
-            // In production, replace prints with a proper error handler.
+
             print("❌ Failed to write events: \(error)")
             print("❌ Failure Reason: \(FileWriteFailureReason(error: error).rawValue)")
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Rotation
 
     /// Rotates the current file if appending new data would exceed configured limits.
     private func rotateFileIfNeeded(newDataSize: Int, newEventCount: Int) async throws {

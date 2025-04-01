@@ -49,13 +49,3 @@ final class MockFileSystem: FileSystem {
         files.removeValue(forKey: url)
     }
 }
-
-// MARK: - Mock Cleanup Manager
-
-final actor MockCleanupManager {
-    private(set) var cleanupCalled = false
-
-    func performCleanup() async {
-        cleanupCalled = true
-    }
-}

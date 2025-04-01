@@ -20,7 +20,7 @@ import Foundation
 import RelayCommon
 
 extension RelayEvent {
-    static func mock(
+    public static func mock(
         id: RelayEventID = RelayEventID(rawValue: UUID()),
         name: String = "mock.event",
         timestamp: Date = Date(),

@@ -20,7 +20,13 @@ struct PendingWrite {
 
 // MARK: - Retry Coordinator
 
-final actor RetryCoordinator {
+protocol RetryCoordinator: Actor {
+    func enqueue(_ write: PendingWrite)
+    
+    func retryLoop()
+}
+
+final actor DefaultRetryCoordinator: RetryCoordinator {
     // MARK: - Dependencies
 
     private let fileSystem: FileSystem
