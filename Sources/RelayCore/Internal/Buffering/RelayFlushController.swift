@@ -12,77 +12,103 @@
 import Foundation
 import RelayCommon
 
-/// A scheduler that periodically flushes a `RelayEventBuffer`.
+/// A controller that manages the cadence of flushes from a RelayEventBuffer.
 ///
-/// `RelayFlushController` is responsible for invoking `flush()` on a `RelayEventBuffer`
-/// at a fixed time interval using Swift Concurrency. It also hooks into the application
-/// lifecycle to flush any pending events when the app is about to move to the background.
+/// `RelayFlushController` is responsible for periodically flushing the event buffer—both on a timer
+/// and during critical lifecycle events. This decouples the timing logic from the buffer itself,
+/// improving modularity and testability.
 ///
-/// This actor is designed to be decoupled and testable. While `RelayEventBuffer` handles
-/// in-memory event storage and batched flushing, this controller handles **when** those
-/// flushes occur.
-///
-/// By separating timing logic from buffer logic, the system gains modularity, composability,
-/// and improved testability.
-///
-/// - Note: This controller uses non-blocking `Task.sleep` for scheduling instead of timers.
-/// - Important: Always call `stop()` when shutting down to cancel the flush task.
+/// Features:
+/// - **Timer-Based Flush:** Flushes the buffer at a configured interval (default is every 5 seconds).
+/// - **Lifecycle-Based Flush:** Observes app lifecycle events (via `LifecycleObserver`)
+///   and triggers a flush when the app is about to resign active (e.g. move to background).
+/// - **Manual Flush:** Exposes a `flush()` method to allow external components to force a flush.
+/// - **Cooperative Scheduling:** If a Scheduler is provided, flush tasks will be scheduled cooperatively.
+/// - **Safe Shutdown:** The flush task is cancelable via `stop()`.
 ///
 /// Example usage:
-///
 /// ```swift
-/// let flushController = RelayFlushController(interval: 5.0, lifecycleObserver: observer)
-/// flushController.start(buffer: buffer)
+/// let flushController = RelayFlushController(interval: 5.0, lifecycleObserver: observer, scheduler: myScheduler)
+/// flushController.start(buffer: eventBuffer)
+/// // Later on, an external component can manually trigger a flush:
+/// await flushController.flush()
+/// // On shutdown:
+/// flushController.stop()
 /// ```
-///
-/// - SeeAlso: `RelayEventBuffer`, `LifecycleObserver`
 actor RelayFlushController {
     private var flushTask: Task<Void, Never>?
     private let interval: TimeInterval
     private let lifecycleObserver: LifecycleObserver
+    private let scheduler: Scheduler
+    private var buffer: RelayEventBuffer?
 
-    /// Creates a new flush controller that triggers flushes on a set interval and app background.
+    /// Creates a new flush controller that triggers flushes at a given interval and during critical lifecycle events.
     ///
     /// - Parameters:
-    ///   - interval: Time interval (in seconds) between flushes. Default is 5 seconds.
-    ///   - lifecycleObserver: An observer for app lifecycle events used to flush on background.
-    init(interval: TimeInterval = 5.0, lifecycleObserver: LifecycleObserver) {
+    ///   - interval: The time interval (in seconds) between flushes. Default is 5 seconds.
+    ///   - lifecycleObserver: An observer for app lifecycle events to trigger flushes on background.
+    ///   - scheduler: An optional Scheduler to coordinate flush tasks. If nil, Task.sleep is used.
+    init(
+        interval: TimeInterval = 5.0,
+        lifecycleObserver: LifecycleObserver,
+        scheduler: Scheduler = DefaultScheduler()
+    ) {
         self.interval = interval
         self.lifecycleObserver = lifecycleObserver
+        self.scheduler = scheduler
     }
 
-    /// Starts the periodic flush loop using Swift Concurrency.
+    /// Starts the flush loop using the provided `RelayEventBuffer`.
     ///
-    /// This schedules a background task that repeatedly calls `flush()` on the provided
-    /// buffer using `Task.sleep(nanoseconds:)` for interval-based timing. The task is
-    /// suspendable, cancelable, and runs independently of the main thread.
+    /// This method stores the buffer reference, starts a periodic task to flush it, and hooks into
+    /// lifecycle events so that a flush occurs when the app is about to resign active.
     ///
-    /// In addition, a one-time flush will be triggered when the app is about to resign
-    /// active (e.g., when sent to the background), ensuring that in-memory telemetry
-    /// is persisted before the app is suspended.
-    ///
-    /// - Parameter buffer: The `RelayEventBuffer` to flush at regular intervals.
+    /// - Parameter buffer: The RelayEventBuffer instance that holds events to be flushed.
     func start(buffer: RelayEventBuffer) {
+        self.buffer = buffer
         flushTask?.cancel()
 
-        flushTask = Task {
+        flushTask = Task<Void, Never> {
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
-                await buffer.flush()
+                do {
+                    try await scheduler.schedule {
+                        await self.flush()
+                    }
+                } catch {
+                    // Log the error and optionally emit metrics.
+                    print("Flush task error: \(error)")
+                    
+                    do {
+                        // Optionally, if we have a metricsEmitter, emit a flush failure metric here.
+                        // Wait for a short period to avoid a tight error loop.
+                        try await Task.sleep(nanoseconds: UInt64(1_000_000_000)) // 1 second
+                    } catch {
+                        print("Sleep error: \(error)")
+                    }
+                    
+                }
             }
         }
 
-        lifecycleObserver.observeWillResignActive {
-            Task {
-                await buffer.flush()
+        // Trigger an immediate flush when the app is about to move to the background.
+        lifecycleObserver.observeWillResignActive { [weak self] in
+            Task { [weak self] in
+                await self?.flush()
             }
         }
     }
 
-    /// Stops the periodic flush loop and cancels any scheduled tasks.
+    /// Manually triggers a flush of the event buffer.
     ///
-    /// This should be called when the buffer is being torn down (e.g., on app shutdown
-    /// or test cleanup) to prevent orphaned background tasks from continuing to run.
+    /// This method can be invoked externally to force an immediate flush.
+    func flush() async {
+        guard let buffer = self.buffer else { return }
+        await buffer.flush()
+    }
+
+    /// Stops the periodic flush loop and cancels any scheduled flush tasks.
+    ///
+    /// Call this method during shutdown to clean up background tasks.
     func stop() {
         flushTask?.cancel()
         flushTask = nil
