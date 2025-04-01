@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 struct CompressedEventSerializer: EventSerializer {
     let base: EventSerializer

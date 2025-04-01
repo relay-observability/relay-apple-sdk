@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// A simple, pluggable serializer that encodes an array of `RelayEvent` into JSON `Data`.
 struct JSONEventSerializer: EventSerializer {

@@ -26,6 +26,11 @@ public struct FileDiskWriterConfiguration: Sendable {
     public let fileRetentionDuration: TimeInterval
     /// A closure that takes the current Date and returns a file name.
     public let fileNamingStrategy: FileNamingStrategy
+    /// Maximum number of retry attempts when writing events to disk fails.
+    public let maxAttempts: Int = 5
+    /// The number of milliseconds to wait after the first write failure by default.
+    /// The default value is 50 milliseconds (ms).
+    public let initialDelay: TimeInterval = 50 / 1000
     /// Emits metrics about the SDK.
     public let metricsEmitter: MetricsEmitter
 

@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 final actor CleanupManager {
     private let directory: URL

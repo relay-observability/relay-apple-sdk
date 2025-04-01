@@ -10,6 +10,7 @@
 //
 
 #if canImport(UIKit)
+    import RelayCommon
     import UIKit
 
     public final class UIKitLifecycleObserver: LifecycleObserver {

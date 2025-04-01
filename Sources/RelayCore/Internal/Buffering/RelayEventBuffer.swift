@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// An actor-based buffer that wraps a production-level RingBuffer of RelayEvent objects.
 /// It provides thread-safe, asynchronous event buffering and periodic flushing using dependency injection for persistence.

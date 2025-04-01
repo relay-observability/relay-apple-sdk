@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// A testable, non-persistent writer that just stores events in memory.
 public final class InMemoryDiskWriter: EventPersisting {

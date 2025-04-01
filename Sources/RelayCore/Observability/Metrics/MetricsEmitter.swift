@@ -9,6 +9,8 @@
 //  See LICENSE.md in the project root for license information.
 //
 
+import RelayCommon
+
 /// A protocol for emitting SDK metrics. Implementers can forward metrics to a monitoring backend.
 public protocol MetricsEmitter: Sendable {
     /// Emits a metric with a name, value, and optional tags.

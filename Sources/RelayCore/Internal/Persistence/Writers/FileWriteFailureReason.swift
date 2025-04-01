@@ -11,7 +11,7 @@
 
 import Foundation
 
-public enum FileWriteFailureReason: String, Sendable {
+public enum FileWriteFailureReason: String, Error, Sendable {
     case noCurrentFile = "No current file available"
     case fileCreationFailed = "File creation failed"
     case insufficientDiskSpace = "Insufficient disk space"

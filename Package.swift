@@ -9,6 +9,7 @@ let package = Package(
     ],
     products: [
         .library(name: "Relay", targets: ["Relay"]),
+        .library(name: "RelayCommon", targets: ["RelayCommon"]),
         .library(name: "RelayCore", targets: ["RelayCore"])
     ],
     dependencies: [
@@ -16,8 +17,12 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "RelayCore",
+            name: "RelayCommon",
             dependencies: []
+        ),
+        .target(
+            name: "RelayCore",
+            dependencies: ["RelayCommon"]
         ),
         .target(
             name: "Relay",
