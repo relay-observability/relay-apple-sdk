@@ -16,6 +16,9 @@ final class RingBufferTests: XCTestCase {
     // Test enqueuing fewer elements than capacity.
     func testEnqueueFewerThanCapacity() async {
         let buffer = RingBuffer<Int>(capacity: 5)
+        var empty = await buffer.isEmpty
+        XCTAssertTrue(empty)
+        
         let result1 = await buffer.enqueue(10)
         XCTAssertTrue(result1)
         let result2 = await buffer.enqueue(20)
@@ -27,7 +30,7 @@ final class RingBufferTests: XCTestCase {
         XCTAssertEqual(count, 3)
         let full = await buffer.isFull
         XCTAssertFalse(full)
-        let empty = await buffer.isEmpty
+        empty = await buffer.isEmpty
         XCTAssertFalse(empty)
 
         // Verify FIFO order using flush.
@@ -35,8 +38,8 @@ final class RingBufferTests: XCTestCase {
         XCTAssertEqual(elements, [10, 20, 30])
         let countAfterFlush = await buffer.count
         XCTAssertEqual(countAfterFlush, 0)
-        let emptyAfterFlush = await buffer.isEmpty
-        XCTAssertTrue(emptyAfterFlush)
+        empty = await buffer.isEmpty
+        XCTAssertTrue(empty)
     }
 
     // Test enqueuing exactly capacity number of elements.
@@ -119,6 +122,8 @@ final class RingBufferTests: XCTestCase {
 
         let count = await buffer.count
         XCTAssertEqual(count, 0)
+        let empty = await buffer.isEmpty
+        XCTAssertTrue(empty)
     }
 
     // Test concurrent enqueues to simulate high throughput.

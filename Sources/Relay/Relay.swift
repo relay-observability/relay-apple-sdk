@@ -9,6 +9,7 @@
 //  See LICENSE.md in the project root for license information.
 //
 
+/// Main entry point to the SDK
 public enum Relay: Int {
     case one = 1
 }
