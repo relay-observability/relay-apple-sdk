@@ -17,8 +17,7 @@
 //
 
 import Foundation
-
-@testable import RelayCore
+import RelayCommon
 
 extension RelayEvent {
     static func mock(

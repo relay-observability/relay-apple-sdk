@@ -9,7 +9,7 @@
 //  See LICENSE.md in the project root for license information.
 //
 
-import XCTest
 @testable import RelayCore
+import XCTest
 
 final class FileDiskWriterTests: XCTestCase {}

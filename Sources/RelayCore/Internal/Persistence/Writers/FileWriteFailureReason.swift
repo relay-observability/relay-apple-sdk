@@ -11,7 +11,7 @@
 
 import Foundation
 
-public enum FileWriteFailureReason: String, Sendable {
+public enum FileWriteFailureReason: String, Error, Sendable {
     case noCurrentFile = "No current file available"
     case fileCreationFailed = "File creation failed"
     case insufficientDiskSpace = "Insufficient disk space"
@@ -19,7 +19,7 @@ public enum FileWriteFailureReason: String, Sendable {
     case ioError = "I/O error"
     case serializationError = "Serialization error"
     case unknown = "Unknown error"
-    
+
     public init(error: Error) {
         if let writerError = error as? FileDiskWriter.Error {
             switch writerError {
@@ -31,7 +31,7 @@ public enum FileWriteFailureReason: String, Sendable {
                 return
             }
         }
-        
+
         if let nsError = error as NSError?, nsError.domain == NSCocoaErrorDomain {
             if nsError.code == NSFileWriteNoPermissionError || nsError.code == NSFileReadNoPermissionError {
                 self = .permissionDenied
@@ -46,12 +46,12 @@ public enum FileWriteFailureReason: String, Sendable {
                 return
             }
         }
-        
+
         if error is EncodingError || error is DecodingError {
             self = .serializationError
             return
         }
-        
+
         self = .unknown
     }
 }

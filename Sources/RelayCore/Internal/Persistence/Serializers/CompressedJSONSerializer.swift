@@ -10,17 +10,19 @@
 //
 
 import Foundation
+import RelayCommon
 
-/// Stubbed implementation for compression support.
-/// Future: Use Apple's Compression framework or zstd for performance.
-public final class CompressedJSONSerializer: EventSerializer {
-    public init() {}
+struct CompressedEventSerializer: EventSerializer {
+    let base: EventSerializer
+    let compressor: DataCompressor
 
-    public func encode(_ events: [RelayEvent]) throws -> Data {
-        // Stub: Just use normal JSON for now.
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(events)
-        // TODO: Apply compression (e.g. zlib, zstd)
-        return data
+    func encode(_ events: [RelayEvent]) throws -> Data {
+        let raw = try base.encode(events)
+        return try compressor.compress(raw)
+    }
+
+    func decode(_ data: Data) throws -> [RelayEvent] {
+        let raw = try compressor.decompress(data)
+        return try base.decode(raw)
     }
 }

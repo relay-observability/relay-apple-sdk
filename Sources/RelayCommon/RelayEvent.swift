@@ -15,7 +15,7 @@ import Foundation
  A generic telemetry event that Relay plugins emit and exporters handle.
 
  This struct represents a telemetry event with a unique identifier, a name, a timestamp, and a set of attributes.
- 
+
  **Design Considerations:**
  - Uses strongly typed attributes via `TelemetryAttribute` instead of a fully dynamic type like `AnyCodable`.
  - This design preserves type information, enabling better performance and more precise handling in high-frequency scenarios,
@@ -23,7 +23,7 @@ import Foundation
  - The use of strongly typed attributes allows for optimized serialization and downstream processing, without the overhead of
    runtime type erasure.
  */
-public struct RelayEvent: Encodable, Sendable, Identifiable, Hashable {
+public struct RelayEvent: Codable, Sendable, Identifiable, Hashable {
     /// A unique identifier for the event.
     public let id: RelayEventID
     /// The name or type of the event.

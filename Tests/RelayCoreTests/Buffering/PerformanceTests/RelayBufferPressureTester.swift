@@ -10,8 +10,9 @@
 //
 
 import Foundation
-import XCTest
+import RelayCommon
 @testable import RelayCore
+import XCTest
 
 final class RelayBufferPressureTester {
     private let buffer: RelayEventBuffer
@@ -38,12 +39,13 @@ final class RelayBufferPressureTester {
         self.duration = duration
         self.flushInterval = flushInterval
         self.exporterDelay = exporterDelay
-        self.stats = tracker
+        stats = tracker
 
-        self.writer = MockWriter(delay: exporterDelay)
-        self.buffer = RelayEventBuffer(capacity: bufferSize, writer: writer)
+        writer = MockWriter(delay: exporterDelay)
+        buffer = RelayEventBuffer(capacity: bufferSize, writer: writer)
     }
 
+    @available(iOS 16.0, *)
     func runTest() async {
         let endTime = Date().addingTimeInterval(duration)
 
@@ -59,7 +61,7 @@ final class RelayBufferPressureTester {
 
         // Start concurrent event producers
         await withTaskGroup(of: Void.self) { group in
-            for _ in 0..<concurrency {
+            for _ in 0 ..< concurrency {
                 group.addTask {
                     while Date() < endTime {
                         let id = await self.nextID()

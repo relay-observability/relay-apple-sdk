@@ -10,14 +10,14 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// An actor-based file writer that writes batches of events to disk.
 /// It rotates files when a file reaches the configured limits and delegates cleanup to a separate actor.
-/// The file writer supports configurable retry logic for transient write failures.
+/// The file writer now integrates with a robust RetryCoordinator for handling transient write failures.
 final actor FileDiskWriter: EventPersisting {
-    
     // MARK: - Types
-    
+
     /// Errors thrown by the FileDiskWriter.
     enum Error: Swift.Error, Sendable {
         /// Indicates that there is no current file available.
@@ -25,7 +25,7 @@ final actor FileDiskWriter: EventPersisting {
         /// Indicates that file creation failed, along with a description.
         case fileCreationFailed(reason: String)
     }
-    
+
     /// Structure representing the current file being written to.
     private struct CurrentFile {
         /// The file URL.
@@ -35,9 +35,9 @@ final actor FileDiskWriter: EventPersisting {
         /// The current file size in bytes.
         var size: Int
     }
-    
+
     // MARK: - Dependencies and Configuration
-    
+
     private let directory: URL
     private let serializer: EventSerializer
     private let retryPolicy: RetryPolicy
@@ -45,22 +45,27 @@ final actor FileDiskWriter: EventPersisting {
     private let fileSystem: FileSystem
     private let config: FileDiskWriterConfiguration
     private let cleanupManager: CleanupManager
-    
+    private let retryCoordinator: RetryCoordinator
+    // TODO: This probably needs to be a JIT dependency
+    // TODO: Probably remove this dependency and just pass it into the RetryCoordinator
+    private let criticalErrorHandler: CriticalErrorHandler?
+
     /// Holds the current file metadata.
     private var currentFile: CurrentFile?
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new FileDiskWriter.
     ///
     /// - Parameters:
-    ///   - directory: The directory URL where event files will be stored. All files will reside in this directory.
+    ///   - directory: The directory URL where event files will be stored.
     ///   - serializer: An object conforming to `EventSerializer` used to encode events into `Data`.
-    ///   - retryPolicy: The policy for retrying failed writes. Defaults to `.none`.
+    ///   - retryPolicy: The policy for retrying failed writes.
     ///   - scheduler: An object conforming to `Scheduler` to offload blocking I/O operations.
     ///   - fileSystem: An object conforming to `FileSystem` for abstracting file operations.
     ///   - config: A configuration object containing thresholds for file rotation, retention, etc.
     ///   - cleanupManager: A dedicated actor responsible for cleaning up expired files and enforcing disk usage limits.
+    ///   - persistentStorage: Optional storage for persisting pending writes for crash recovery.
     init(
         directory: URL,
         serializer: EventSerializer,
@@ -68,7 +73,9 @@ final actor FileDiskWriter: EventPersisting {
         scheduler: Scheduler = DefaultScheduler(),
         fileSystem: FileSystem = DefaultFileSystem(),
         config: FileDiskWriterConfiguration = .init(),
-        cleanupManager: CleanupManager
+        cleanupManager: CleanupManager,
+        persistentStorage: PendingWriteStorage? = nil,
+        criticalErrorHandler: CriticalErrorHandler? = nil
     ) {
         self.directory = directory
         self.serializer = serializer
@@ -77,35 +84,51 @@ final actor FileDiskWriter: EventPersisting {
         self.fileSystem = fileSystem
         self.config = config
         self.cleanupManager = cleanupManager
+        self.criticalErrorHandler = criticalErrorHandler
+
+        // Instantiate the RetryCoordinator using properties from retryPolicy.
+        self.retryCoordinator = RetryCoordinator(
+            fileSystem: fileSystem,
+            scheduler: scheduler,
+            metricsEmitter: config.metricsEmitter,
+            maxAttempts: config.maxAttempts,
+            baseDelay: config.initialDelay,
+            persistentStorage: persistentStorage,
+            criticalErrorHandler: criticalErrorHandler
+        )
     }
-    
+
     // MARK: - Methods
-    
+
     /// Writes a batch of events to disk.
     ///
-    /// This method encodes the events, rotates files if needed (based on size and event count),
-    /// attempts to write the data with retry logic for transient errors, and then delegates cleanup.
+    /// This method encodes the events, rotates files if needed,
+    /// attempts to write the data using the RetryCoordinator,
+    /// and then delegates cleanup.
     ///
     /// - Parameter events: An array of `RelayEvent` instances to write.
     func write(_ events: [RelayEvent]) async {
         do {
             let data = try serializer.encode(events)
             try await rotateFileIfNeeded(newDataSize: data.count, newEventCount: events.count)
-            
+
             guard let file = currentFile else {
                 throw Error.noCurrentFile
             }
-            
-            // Attempt to write data with retry logic.
-            try await attemptWrite(data: data, to: file.url)
-            
-            // Update current file state.
+
+            // Create a PendingWrite and delegate the file append operation to RetryCoordinator.
+            await retryCoordinator.enqueue(PendingWrite(data: data, url: file.url))
+
+            // Update current file state only on a successful write.
             currentFile?.eventCount += events.count
             currentFile?.size += data.count
-            
-            // Emit a metric for a successful write.
-            config.metricsEmitter.emitMetric(name: "file.write.success", value: Double(events.count), tags: nil)
-            
+
+            config.metricsEmitter.emitMetric(
+                name: "file.write.success",
+                value: Double(events.count),
+                tags: nil
+            )
+
             // Delegate cleanup to the CleanupManager.
             await cleanupManager.performCleanup()
         } catch {
@@ -115,37 +138,28 @@ final actor FileDiskWriter: EventPersisting {
                 value: 1,
                 tags: ["error": .string(FileWriteFailureReason(error: error).rawValue)]
             )
-            
             // In production, replace prints with a proper error handler.
             print("❌ Failed to write events: \(error)")
             print("❌ Failure Reason: \(FileWriteFailureReason(error: error).rawValue)")
-            
-            // TODO: Additional retry or error handling could be implemented here.
         }
     }
-    
+
     // MARK: - Private Methods
-    
+
     /// Rotates the current file if appending new data would exceed configured limits.
-    ///
-    /// - Parameters:
-    ///   - newDataSize: The size in bytes of the new data to append.
-    ///   - newEventCount: The number of new events to append.
-    ///
-    /// - Throws: An error if file rotation fails.
     private func rotateFileIfNeeded(newDataSize: Int, newEventCount: Int) async throws {
         if currentFile == nil {
             currentFile = try createNewFile()
             return
         }
-        
+
         guard let file = currentFile else { return }
-        
+
         let rotationPolicy = FileRotationPolicy(
             maxSize: config.maxFileSize,
             maxEvents: config.maxEventsPerFile
         )
-        
+
         if rotationPolicy.shouldRotate(
             currentSize: file.size,
             currentEvents: file.eventCount,
@@ -156,12 +170,8 @@ final actor FileDiskWriter: EventPersisting {
             config.metricsEmitter.emitMetric(name: "file.rotation", value: 1, tags: nil)
         }
     }
-    
+
     /// Creates a new file for writing events.
-    ///
-    /// - Returns: A `CurrentFile` representing the newly created file.
-    ///
-    /// - Throws: `Error.fileCreationFailed` if the file cannot be created.
     private func createNewFile() throws -> CurrentFile {
         let filename = config.fileNamingStrategy(Date())
         let fileURL = directory.appendingPathComponent(filename)
@@ -172,67 +182,71 @@ final actor FileDiskWriter: EventPersisting {
         }
         return CurrentFile(url: fileURL, eventCount: 0, size: 0)
     }
+}
+
+/*
+ 
+ File Disk Writer Design:
+ 
+ - Actor based concurrency
+    FileDiskWriter is a final actor, which guarantees isolation and thread-safety. Perfect for concurrent telemetry.
+ - Injection of components
+    FileSystem, Scheduler, CleanupManager, and EventSerializer are all injected. This makes testing and extensibility very clean.
+ - File Rotation
+    File rotation based on event count and file size is implemented and looks robust.
+ - Clean File State Tracking
+    currentFile, totalEvents, and totalBytes are simple and well-contained state.
+ - Metrics Hook
+    Emitting metrics like file.write.success, file.write.failure, file.rotation is excellent for monitoring.
+ - Compression Support
+    With CompressedEventSerializer, you’ve added gzip without polluting core writer logic.
+ 
+ Task list Remaining:
+ 1. Retry Policy Implementation
+    - There's backoff or retry queue
+    - There's no logic for how long to retry or when to give up
+    - It's unclear how I track failed batches or persisted retry attempts
+    - Offline mode?
+ 
+    Suggestions:
+    - Create a RetryQueue or PendingWriteBuffer for failed writes
+    - Use exponential backoff, jitter, or attempt count tracking
+    - Persist failed batches to disk if recovery across launches is desired (low priority unless needed)
+    - Consider emtting metrtics: `file.write.retry_attempt`, `file.write.retry_execeeded`
+ 2. Flush Timing / App Lifecycle
+    - It's unclear if the writer:
+        - flushes on app background
+        - batches writes periodically
+        - integrates with an external FlushController
+ 
+    Suggestions:
+        - Abstract flush coordination into FlushController
+        - Inject an AppLifecycleObserver so background flush is testable and platform-neutral
+        - Allow external flush() calls for manual triggers (e.g. after  cricial events)
+
+ 3. Backpresure / Drop Strategy
+    - What happens when writing fails repeatedly (e.g. disk full or permission denied)?
+        - Right now, it might just keep retrying indefinitely
     
-    /// Attempts to write data to the specified file URL using the injected file system.
-    ///
-    /// This method implements retry logic based on the configured `retryPolicy`. Depending on the policy,
-    /// it can either attempt immediate retries up to a maximum number of attempts or use exponential backoff.
-    ///
-    /// - Parameters:
-    ///   - data: The data to write.
-    ///   - fileURL: The URL of the file to which data should be appended.
-    ///
-    /// - Throws: An error if all retry attempts fail.
-    private func attemptWrite(data: Data, to fileURL: URL) async throws {
-        var attempt = 0
-        var delay: UInt64 = 0
-        let maxAttempts: Int
-        
-        switch retryPolicy {
-        case .none:
-            maxAttempts = 1
-        case .immediate(let attempts):
-            maxAttempts = attempts
-        case .exponentialBackoff(let retries, let initialDelay):
-            maxAttempts = retries
-            delay = UInt64(initialDelay * 1_000_000_000) // convert seconds to nanoseconds
-        case .custom:
-            // For custom policies, default to immediate retries.
-            maxAttempts = 3
-        }
-        
-        while attempt < maxAttempts {
-            do {
-                try await scheduler.schedule {
-                    try self.fileSystem.append(data: data, to: fileURL)
-                }
-                // Successful write; exit the retry loop.
-                return
-            } catch {
-                attempt += 1
-                if attempt >= maxAttempts {
-                    throw error
-                }
-                // For exponential backoff, wait before the next attempt.
-                if case .exponentialBackoff = retryPolicy {
-                    try await Task.sleep(nanoseconds: delay)
-                    // Increase delay exponentially (e.g., double it).
-                    delay *= 2
-                } else {
-                    // For immediate retries, you might choose a small fixed delay.
-                    try await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                }
-            }
-        }
-    }
-}
-
-struct FileRotationPolicy {
-    let maxSize: Int
-    let maxEvents: Int
-
-    func shouldRotate(currentSize: Int, currentEvents: Int, newDataSize: Int, newEventCount: Int) -> Bool {
-        return currentSize + newDataSize > maxSize ||
-               currentEvents + newEventCount > maxEvents
-    }
-}
+    Suggestions:
+    - Drop events with a warning after N attempts
+    - Add a `DropPolicy` with options like `.warnAndDiscard`, `.persistFailedEvents`
+ 4. File Cleanup Enhancements
+    - `CleanupManager` should:
+        - track maximum number of files or disk quota
+        - cleanup older files safely (FIFO)
+ 
+    Sugestions:
+        - Add policies like maxFileAge or maxTotalDiskBytes
+        - Unit-test file cleanup behavior on threshold breach
+ 5. Improve Loggging
+     - Inject a logger or define a RelayLogger protocol
+     - Allow logs to be suppressed or routed to a backend
+     - Consider adding a FileDiskWriterDelegate for more flexible hooks
+ 6. Unit tests
+     - Write success + failure
+     - Rotation based on size + count
+     - Retry flow (i.e. simulate failures)
+     - File cleanup behavior
+     - Compression roundtrip with decode
+ */

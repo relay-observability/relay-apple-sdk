@@ -10,20 +10,20 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// An actor-based buffer that wraps a production-level RingBuffer of RelayEvent objects.
 /// It provides thread-safe, asynchronous event buffering and periodic flushing using dependency injection for persistence.
 actor RelayEventBuffer {
-    
     /// The underlying ring buffer storing RelayEvent instances.
     private var ringBuffer: RingBuffer<RelayEvent>
-    
+
     /// The persistence layer to which events will be flushed.
     private let writer: EventPersisting
-    
+
     /// A Task that periodically flushes the buffer.
     private var flushTask: Task<Void, Never>?
-    
+
     /// The capacity of the buffer.
     let capacity: Int
 
@@ -33,10 +33,10 @@ actor RelayEventBuffer {
     ///   - writer: The persistence component conforming to EventPersisting.
     init(capacity: Int, writer: EventPersisting) {
         self.capacity = capacity
-        self.ringBuffer = RingBuffer<RelayEvent>(capacity: capacity)
+        ringBuffer = RingBuffer<RelayEvent>(capacity: capacity)
         self.writer = writer
     }
-    
+
     /// Adds a new event to the buffer.
     /// - Parameter event: The RelayEvent to add.
     func add(_ event: RelayEvent) async {
@@ -46,7 +46,7 @@ actor RelayEventBuffer {
             // The RingBuffer already tracks the number of dropped events.
         }
     }
-    
+
     /// Flushes the current buffer by atomically removing all events and writing them to persistence.
     func flush() async {
         let events = await ringBuffer.flush()
@@ -55,7 +55,7 @@ actor RelayEventBuffer {
             await writer.write(events)
         }
     }
-    
+
     /// Starts a periodic flush loop that flushes the buffer at the specified interval.
     /// - Parameter interval: The time interval (in seconds) between flushes. Defaults to 5 seconds.
     func startFlush(interval: TimeInterval = 5.0) {
@@ -67,7 +67,7 @@ actor RelayEventBuffer {
             }
         }
     }
-    
+
     /// Stops the periodic flush loop.
     func stopFlush() async {
         flushTask?.cancel()

@@ -58,19 +58,19 @@ import Foundation
 
  print(attribute1.stringValue) // "example"
  print(attribute2.stringValue) // "42"
-*/
+ */
 public enum TelemetryAttribute: Codable, Hashable, Sendable {
     case string(String)
     case int(Int)
     case double(Double)
     case bool(Bool)
-    
+
     public var stringValue: String {
         switch self {
-        case .string(let value): return value
-        case .int(let value): return String(value)
-        case .double(let value): return String(value)
-        case .bool(let value): return String(value)
+        case let .string(value): return value
+        case let .int(value): return String(value)
+        case let .double(value): return String(value)
+        case let .bool(value): return String(value)
         }
     }
 
@@ -96,13 +96,13 @@ public enum TelemetryAttribute: Codable, Hashable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case .string(let value):
+        case let .string(value):
             try container.encode(value)
-        case .int(let value):
+        case let .int(value):
             try container.encode(value)
-        case .double(let value):
+        case let .double(value):
             try container.encode(value)
-        case .bool(let value):
+        case let .bool(value):
             try container.encode(value)
         }
     }

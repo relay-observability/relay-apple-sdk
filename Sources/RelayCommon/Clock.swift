@@ -1,5 +1,5 @@
 //
-//  EventSerializer.swift
+//  Clock.swift
 //  RelayCore
 //
 //  Created on March 30, 2025 as part of the Relay open-source observability SDK.
@@ -9,8 +9,15 @@
 //  See LICENSE.md in the project root for license information.
 //
 
+//
+//  Clock.swift
+//  Relay
+//
+//  Created by Caleb Davis on 3/30/25.
+//
+
 import Foundation
 
-public protocol EventSerializer {
-    func encode(_ events: [RelayEvent]) throws -> Data
+public protocol Clock {
+    func now() -> Date
 }

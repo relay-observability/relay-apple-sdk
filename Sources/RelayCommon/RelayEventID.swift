@@ -37,13 +37,13 @@ public struct RelayEventID: RawRepresentable, Codable, Hashable, ExpressibleBySt
     ///   If the string is a valid UUID, that value is used. Otherwise, a deterministic UUID is generated.
     public init(uuidString: String) {
         if let uuid = UUID(uuidString: uuidString) {
-            self.rawValue = uuid
+            rawValue = uuid
         } else {
             let generatedUUIDString = Self.makeUUIDString(from: uuidString)
             guard let generatedUUID = UUID(uuidString: generatedUUIDString) else {
                 fatalError("Failed to generate a valid UUID from string: \(uuidString)")
             }
-            self.rawValue = generatedUUID
+            rawValue = generatedUUID
         }
     }
 
@@ -60,11 +60,11 @@ public struct RelayEventID: RawRepresentable, Codable, Hashable, ExpressibleBySt
     private static func makeUUIDString(from string: String) -> String {
         let hash = string.hashValue.magnitude
         let hex = String(format: "%032llx", hash)
-        
+
         // swiftlint:disable line_length
         let uuidString = "\(hex.prefix(8))-\(hex.dropFirst(8).prefix(4))-\(hex.dropFirst(12).prefix(4))-\(hex.dropFirst(16).prefix(4))-\(hex.dropFirst(20).prefix(12))"
         // swiftlint:enable line_length
-        
+
         return uuidString
     }
 }

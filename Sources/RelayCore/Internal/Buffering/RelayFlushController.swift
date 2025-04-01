@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 
 /// A scheduler that periodically flushes a `RelayEventBuffer`.
 ///
