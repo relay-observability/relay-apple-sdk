@@ -13,6 +13,7 @@ import XCTest
 
 /// This file is commented out to avoid long CI times.
 /// You can run `testBufferUnderPressure` to view the bechmark results in PERFORMANCE.md
+@available(iOS 16.0, *)
 final class RelayBenchmarkTests: XCTestCase {
     /// Relay Buffer Pressure Test Results (Example)
     ///

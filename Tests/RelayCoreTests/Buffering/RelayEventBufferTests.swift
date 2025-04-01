@@ -9,6 +9,7 @@
 //  See LICENSE.md in the project root for license information.
 //
 
+import RelayCommon
 @testable import RelayCore
 import XCTest
 

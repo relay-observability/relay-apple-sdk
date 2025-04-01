@@ -11,6 +11,7 @@
 
 import Foundation
 
+@available(iOS 16.0, *)
 struct StressTestRunner {
     let tracker = MetricsTracker()
 

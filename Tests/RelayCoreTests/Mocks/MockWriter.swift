@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 @testable import RelayCore
 
 final class MockWriter: EventPersisting {

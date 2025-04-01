@@ -18,6 +18,6 @@
 
 import Foundation
 
-protocol Clock {
+public protocol Clock {
     func now() -> Date
 }

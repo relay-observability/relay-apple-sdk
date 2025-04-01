@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import RelayCommon
 @testable import RelayCore
 import XCTest
 
@@ -44,6 +45,7 @@ final class RelayBufferPressureTester {
         buffer = RelayEventBuffer(capacity: bufferSize, writer: writer)
     }
 
+    @available(iOS 16.0, *)
     func runTest() async {
         let endTime = Date().addingTimeInterval(duration)
 

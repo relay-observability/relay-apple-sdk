@@ -10,8 +10,7 @@
 //
 
 import Foundation
-
-@testable import RelayCore
+import RelayCommon
 
 final class MockFileSystem: FileSystem {
     var files: [URL: Data] = [:]
