@@ -12,9 +12,9 @@
 import Foundation
 import RelayCommon
 
-/// An actor-based buffer that wraps a production-level RingBuffer of RelayEvent objects.
+/// An actor-based buffer that wraps a RingBuffer of RelayEvents.
 /// It provides thread-safe, asynchronous event buffering and periodic flushing using dependency injection for persistence.
-actor RelayEventBuffer {
+actor RelayEventBuffer: EventBuffer {
     /// The underlying ring buffer storing RelayEvent instances.
     private var ringBuffer: RingBuffer<RelayEvent>
 
@@ -23,6 +23,10 @@ actor RelayEventBuffer {
 
     /// A Task that periodically flushes the buffer.
     private var flushTask: Task<Void, Never>?
+    
+    #if DEBUG
+    internal var flushTaskID: UUID?
+    #endif
 
     /// The capacity of the buffer.
     let capacity: Int
@@ -44,6 +48,7 @@ actor RelayEventBuffer {
         if !success {
             // Optionally log or handle the dropped event scenario.
             // The RingBuffer already tracks the number of dropped events.
+            // TODO: Figure out if we want to do anything here.
         }
     }
 
@@ -60,9 +65,20 @@ actor RelayEventBuffer {
     /// - Parameter interval: The time interval (in seconds) between flushes. Defaults to 5 seconds.
     func startFlush(interval: TimeInterval = 5.0) {
         flushTask?.cancel()
+        
+        #if DEBUG
+        flushTaskID = UUID()
+        let currentID = flushTaskID
+        #endif
+        
         flushTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                
+                #if DEBUG
+                guard self.flushTaskID == currentID else { break }
+                #endif
+
                 await self.flush()
             }
         }

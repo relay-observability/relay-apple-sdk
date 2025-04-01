@@ -11,12 +11,33 @@
 
 import RelayCommon
 @testable import RelayCore
+@testable import RelayMocks
 import XCTest
 
 final class RelayEventBufferTests: XCTestCase {
+    
+    private var mockWriter: MockWriter!
+    
+    override func setUp() {
+        super.setUp()
+        
+        mockWriter = MockWriter()
+    }
+    
+    override func tearDown() {
+        mockWriter = nil
+        super.tearDown()
+    }
+    
+    func testFlushWithNoEventsDoesNotWrite() async {
+        let buffer = makeBuffer()
+
+        await buffer.flush()
+        XCTAssertEqual(mockWriter.captured.count, 0, "Expected no flushes with empty buffer")
+    }
+
     func testAddAndFlush() async throws {
-        let writer = MockWriter()
-        let buffer = RelayEventBuffer(capacity: 5, writer: writer)
+        let buffer = makeBuffer()
 
         await buffer.add(RelayEvent.mock(name: "event1"))
         await buffer.add(RelayEvent.mock(name: "event2"))
@@ -24,15 +45,14 @@ final class RelayEventBufferTests: XCTestCase {
 
         await buffer.flush()
 
-        XCTAssertEqual(writer.captured.count, 1, "Expected one flush call")
-        let events = writer.captured.first ?? []
+        XCTAssertEqual(mockWriter.captured.count, 1, "Expected one flush call")
+        let events = mockWriter.captured[0]
         XCTAssertEqual(events.count, 3, "Expected three events flushed")
-        XCTAssertEqual(events.map { $0.name }, ["event1", "event2", "event3"])
+        XCTAssertEqual(events.map(\.name), ["event1", "event2", "event3"])
     }
 
     func testPeriodicFlush() async throws {
-        let writer = MockWriter()
-        let buffer = RelayEventBuffer(capacity: 5, writer: writer)
+        let buffer = makeBuffer()
 
         // Start periodic flush with a 1-second interval.
         await buffer.startFlush(interval: 1.0)
@@ -46,18 +66,38 @@ final class RelayEventBufferTests: XCTestCase {
         // Stop the flush task explicitly in an async context.
         await buffer.stopFlush()
 
-        XCTAssertGreaterThanOrEqual(writer.captured.count, 1, "Expected at least one periodic flush")
-        if let firstFlush = writer.captured.first {
+        XCTAssertGreaterThanOrEqual(mockWriter.captured.count, 1, "Expected at least one periodic flush")
+        if let firstFlush = mockWriter.captured.first {
             XCTAssertEqual(firstFlush.count, 2, "Expected first flush to capture two events")
         }
+    }
+    
+    func testStartFlushCancelsPreviousTask() async throws {
+        let buffer = makeBuffer()
+
+        await buffer.startFlush(interval: 0.5)
+        let firstID = await buffer.flushTaskID
+
+        await buffer.startFlush(interval: 0.5)
+        let secondID = await buffer.flushTaskID
+
+        XCTAssertNotEqual(firstID, secondID, "Expected a new flush task ID to replace the old one")
+    }
+
+    func testStopFlushIsIdempotent() async {
+        let buffer = makeBuffer()
+
+        await buffer.startFlush(interval: 1.0)
+        await buffer.stopFlush()
+        await buffer.stopFlush() // Should not crash
+        XCTAssertTrue(true, "Calling stopFlush() multiple times should not fail")
     }
 
     /// This test validates the thread-safety of RelayEventBuffer.add(_:) under high concurrency.
     /// Correct drop policy under overflow (.dropOldest)
     /// Accurate flush behavior -- doesn't duplicate or miss records beyond buffer limits
     func testConcurrentAdds() async throws {
-        let writer = MockWriter()
-        let buffer = RelayEventBuffer(capacity: 100, writer: writer)
+        let buffer = makeBuffer(capacity: 100)
         let addCount = 1000
 
         // Spawn 1,000 concurrent tasks, each adding their own mock event.
@@ -76,14 +116,13 @@ final class RelayEventBufferTests: XCTestCase {
         // Asserts that only one batch of events was written to the writer.
         // With a capacity of 100 and using .dropOldest policy, expect only the last 100 events.
         // The other 900 events were dropped to make room for the last 100.
-        XCTAssertEqual(writer.captured.count, 1, "Expected one flush call")
-        let events = writer.captured.first ?? []
+        XCTAssertEqual(mockWriter.captured.count, 1, "Expected one flush call")
+        let events = mockWriter.captured.first ?? []
         XCTAssertEqual(events.count, 100, "Expected buffer to hold 100 events due to capacity")
     }
 
     func testStopFlushCancelsPeriodicTask() async throws {
-        let writer = MockWriter()
-        let buffer = RelayEventBuffer(capacity: 5, writer: writer)
+        let buffer = makeBuffer()
 
         await buffer.startFlush(interval: 1.0)
         await buffer.add(RelayEvent.mock(name: "event1"))
@@ -91,10 +130,18 @@ final class RelayEventBufferTests: XCTestCase {
         // Wait for one flush cycle.
         try await Task.sleep(nanoseconds: 1_200_000_000)
         await buffer.stopFlush()
-        let capturedCountAfterStop = writer.captured.count
+        let capturedCountAfterStop = mockWriter.captured.count
 
         // Wait additional time to ensure no new flushes occur.
         try await Task.sleep(nanoseconds: 1_200_000_000)
-        XCTAssertEqual(writer.captured.count, capturedCountAfterStop, "Expected no additional flushes after stopFlush")
+        XCTAssertEqual(
+            mockWriter.captured.count,
+            capturedCountAfterStop,
+            "Expected no additional flushes after stopFlush"
+        )
+    }
+    
+    private func makeBuffer(capacity: Int = 5) -> RelayEventBuffer {
+        RelayEventBuffer(capacity: capacity, writer: mockWriter)
     }
 }

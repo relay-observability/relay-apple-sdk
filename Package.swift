@@ -26,11 +26,16 @@ let package = Package(
         ),
         .target(
             name: "Relay",
-            dependencies: ["RelayCore"]
+            dependencies: ["RelayCore", "RelayCommon"]
+        ),
+        .target(
+            name: "RelayMocks",
+            dependencies: ["RelayCommon", "RelayCore"],
+            path: "Tests/RelayMocks"
         ),
         .testTarget(
             name: "RelayCoreTests",
-            dependencies: ["RelayCore"]
+            dependencies: ["RelayCore", "RelayCommon", "RelayMocks"]
         ),
         .testTarget(
             name: "RelayTests",

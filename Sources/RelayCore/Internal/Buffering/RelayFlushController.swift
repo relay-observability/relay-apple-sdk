@@ -12,42 +12,45 @@
 import Foundation
 import RelayCommon
 
-/// A controller that manages the cadence of flushes from a RelayEventBuffer.
+/// A controller that manages the cadence of flushes from a `RelayEventBuffer`.
 ///
 /// `RelayFlushController` is responsible for periodically flushing the event buffer—both on a timer
-/// and during critical lifecycle events. This decouples the timing logic from the buffer itself,
-/// improving modularity and testability.
+/// and during critical lifecycle events. This decouples the scheduling logic from the buffer itself,
+/// improving testability and separation of concerns.
 ///
-/// Features:
-/// - **Timer-Based Flush:** Flushes the buffer at a configured interval (default is every 5 seconds).
-/// - **Lifecycle-Based Flush:** Observes app lifecycle events (via `LifecycleObserver`)
-///   and triggers a flush when the app is about to resign active (e.g. move to background).
-/// - **Manual Flush:** Exposes a `flush()` method to allow external components to force a flush.
-/// - **Cooperative Scheduling:** If a Scheduler is provided, flush tasks will be scheduled cooperatively.
-/// - **Safe Shutdown:** The flush task is cancelable via `stop()`.
+/// ### Flush Strategies:
+/// - **Timer-Based Flush:** Triggers flushes at a fixed interval using a `Scheduler` (default: every 5 seconds).
+/// - **Lifecycle-Based Flush:** Hooks into app lifecycle events (via `LifecycleObserver`) and flushes on background.
+/// - **Manual Flush:** Exposes a `flush()` method for on-demand flushes by external components.
 ///
-/// Example usage:
+/// ### Design Rationale:
+/// - The `RelayEventBuffer` is passed into `start(buffer:)` rather than the initializer.
+///   This allows:
+///   - Separation of **construction** and **execution**
+///   - Flexible **test configuration** (buffer, scheduler, lifecycle observer)
+///   - Support for **resetting or swapping buffers** without recreating the controller
+/// - Lifecycle observation and periodic scheduling are **only activated when `start()` is called**, avoiding early or duplicated subscriptions.
+///
+/// ### Usage:
 /// ```swift
-/// let flushController = RelayFlushController(interval: 5.0, lifecycleObserver: observer, scheduler: myScheduler)
-/// flushController.start(buffer: eventBuffer)
-/// // Later on, an external component can manually trigger a flush:
-/// await flushController.flush()
-/// // On shutdown:
-/// flushController.stop()
+/// let flushController = RelayFlushController(interval: 5.0, lifecycleObserver: observer, scheduler: scheduler)
+/// flushController.start(buffer: eventBuffer)  // Begin flushing
+/// await flushController.flush()               // Optionally flush immediately
+/// flushController.stop()                      // Cancel background flushes on shutdown
 /// ```
 actor RelayFlushController {
     private var flushTask: Task<Void, Never>?
     private let interval: TimeInterval
     private let lifecycleObserver: LifecycleObserver
     private let scheduler: Scheduler
-    private var buffer: RelayEventBuffer?
+    private var buffer: EventBuffer?
 
     /// Creates a new flush controller that triggers flushes at a given interval and during critical lifecycle events.
     ///
     /// - Parameters:
     ///   - interval: The time interval (in seconds) between flushes. Default is 5 seconds.
     ///   - lifecycleObserver: An observer for app lifecycle events to trigger flushes on background.
-    ///   - scheduler: An optional Scheduler to coordinate flush tasks. If nil, Task.sleep is used.
+    ///   - scheduler: A `Scheduler` to coordinate flush timing. Can be a test scheduler or custom implementation.
     init(
         interval: TimeInterval = 5.0,
         lifecycleObserver: LifecycleObserver,
@@ -58,13 +61,18 @@ actor RelayFlushController {
         self.scheduler = scheduler
     }
 
-    /// Starts the flush loop using the provided `RelayEventBuffer`.
+    /// Starts the flush loop using the provided `EventBuffer`.
     ///
-    /// This method stores the buffer reference, starts a periodic task to flush it, and hooks into
-    /// lifecycle events so that a flush occurs when the app is about to resign active.
+    /// This method:
+    /// - Stores a reference to the provided event buffer
+    /// - Starts a periodic task to flush it using the scheduler
+    /// - Hooks into app lifecycle events to flush when the app resigns active
     ///
-    /// - Parameter buffer: The RelayEventBuffer instance that holds events to be flushed.
-    func start(buffer: RelayEventBuffer) {
+    /// - Parameter buffer: The buffer that holds events to be flushed. Required to begin scheduling.
+    ///
+    /// > Important: `start(buffer:)` **must be called after construction** to begin flushing.
+    /// > You can safely call `start(buffer:)` more than once; previous flush tasks will be cancelled.
+    func start(buffer: EventBuffer) {
         self.buffer = buffer
         flushTask?.cancel()
 
@@ -77,15 +85,13 @@ actor RelayFlushController {
                 } catch {
                     // Log the error and optionally emit metrics.
                     print("Flush task error: \(error)")
-                    
+
+                    // Avoid tight-looping if the scheduler keeps failing.
                     do {
-                        // Optionally, if we have a metricsEmitter, emit a flush failure metric here.
-                        // Wait for a short period to avoid a tight error loop.
                         try await Task.sleep(nanoseconds: UInt64(1_000_000_000)) // 1 second
                     } catch {
                         print("Sleep error: \(error)")
                     }
-                    
                 }
             }
         }
@@ -100,7 +106,8 @@ actor RelayFlushController {
 
     /// Manually triggers a flush of the event buffer.
     ///
-    /// This method can be invoked externally to force an immediate flush.
+    /// Call this when an immediate flush is needed (e.g. app shutdown, significant event).
+    /// If no buffer has been provided via `start(buffer:)`, this method does nothing.
     func flush() async {
         guard let buffer = self.buffer else { return }
         await buffer.flush()
@@ -108,7 +115,8 @@ actor RelayFlushController {
 
     /// Stops the periodic flush loop and cancels any scheduled flush tasks.
     ///
-    /// Call this method during shutdown to clean up background tasks.
+    /// Call this during app teardown or when the controller is no longer needed.
+    /// Safe to call multiple times.
     func stop() {
         flushTask?.cancel()
         flushTask = nil
