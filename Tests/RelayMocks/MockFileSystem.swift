@@ -12,10 +12,12 @@
 import Foundation
 import RelayCommon
 
-final class MockFileSystem: FileSystem {
-    var files: [URL: Data] = [:]
+public final class MockFileSystem: FileSystem {
+    public var files: [URL: Data] = [:]
+    
+    public var shouldFailCreate: Bool = false
 
-    func append(data: Data, to url: URL) throws {
+    public func append(data: Data, to url: URL) throws {
         if let existing = files[url] {
             files[url] = existing + data
         } else {
@@ -23,17 +25,23 @@ final class MockFileSystem: FileSystem {
         }
     }
 
-    func writeAtomically(data: Data, to url: URL, options _: Data.WritingOptions) throws {
+    public func writeAtomically(data: Data, to url: URL, options _: Data.WritingOptions) throws {
+        if shouldFailCreate {
+            throw NSError(domain: "MockFileSystem", code: 101)
+        }
+        
         files[url] = data
     }
 
-    func contentsOfDirectory(at _: URL,
-                             includingPropertiesForKeys _: [URLResourceKey]?,
-                             options _: FileManager.DirectoryEnumerationOptions) throws -> [URL] {
+    public func contentsOfDirectory(
+        at _: URL,
+        includingPropertiesForKeys _: [URLResourceKey]?,
+        options _: FileManager.DirectoryEnumerationOptions
+    ) throws -> [URL] {
         return Array(files.keys)
     }
 
-    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
+    public func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
         // Use the URL string as a key to get Data size and fake creation date.
         guard let url = URL(string: path), let data = files[url] else {
             throw NSError(domain: "MockFileSystem", code: 0, userInfo: nil)
@@ -45,7 +53,7 @@ final class MockFileSystem: FileSystem {
         ]
     }
 
-    func removeItem(at url: URL) throws {
+    public func removeItem(at url: URL) throws {
         files.removeValue(forKey: url)
     }
 }
