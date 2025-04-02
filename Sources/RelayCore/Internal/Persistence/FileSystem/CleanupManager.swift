@@ -12,7 +12,11 @@
 import Foundation
 import RelayCommon
 
-final actor CleanupManager {
+protocol CleanupManager: Actor {
+    func performCleanup() async
+}
+
+final actor DefaultCleanupManager: CleanupManager {
     private let directory: URL
     private let fileSystem: FileSystem
     private let config: FileDiskWriterConfiguration

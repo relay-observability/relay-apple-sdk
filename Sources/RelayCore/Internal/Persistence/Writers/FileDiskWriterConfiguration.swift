@@ -17,22 +17,22 @@ public typealias FileNamingStrategy = @Sendable (Date) -> String
 /// These settings control file rotation and cleanup.
 public struct FileDiskWriterConfiguration: Sendable {
     /// Maximum file size in bytes before rotation occurs.
-    public let maxFileSize: Int
+    public var maxFileSize: Int
     /// Maximum number of events to write in one file.
-    public let maxEventsPerFile: Int
+    public var maxEventsPerFile: Int
     /// Maximum total disk usage in bytes for event files.
-    public let maxTotalDiskUsage: Int
+    public var maxTotalDiskUsage: Int
     /// How long files should be kept before being considered expired (in seconds).
-    public let fileRetentionDuration: TimeInterval
+    public var fileRetentionDuration: TimeInterval
     /// A closure that takes the current Date and returns a file name.
-    public let fileNamingStrategy: FileNamingStrategy
+    public var fileNamingStrategy: FileNamingStrategy
     /// Maximum number of retry attempts when writing events to disk fails.
-    public let maxAttempts: Int = 5
+    public var maxAttempts: Int = 5
     /// The number of milliseconds to wait after the first write failure by default.
     /// The default value is 50 milliseconds (ms).
-    public let initialDelay: TimeInterval = 50 / 1000
+    public var initialDelay: TimeInterval = 50 / 1000
     /// Emits metrics about the SDK.
-    public let metricsEmitter: MetricsEmitter
+    public var metricsEmitter: MetricsEmitter
 
     public init(
         maxFileSize: Int = 1_000_000, // 1 MB per file
